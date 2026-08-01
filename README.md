@@ -47,16 +47,111 @@ phone on the same network.
 
 ## Deploying
 
-Built for a single small VM. See [deploy/oracle-setup.md](deploy/oracle-setup.md) for a full
-walkthrough on Oracle Cloud's Always Free tier.
+Built for a single small VM. The steps below take you from a bare Ubuntu server to a running,
+HTTPS-only instance and work on any provider. For provider-specific gotchas — free-tier shapes,
+firewall quirks, staying inside the free allowance — see
+[deploy/oracle-setup.md](deploy/oracle-setup.md) (Oracle Cloud) and
+[deploy/gcp-setup.md](deploy/gcp-setup.md) (Google Cloud).
+
+Nothing is installed on the host but Docker: the app compiles inside the container, and Caddy
+terminates TLS and obtains a Let's Encrypt certificate on its own. The app is never published to
+the host, so the only way in is over HTTPS through Caddy — TLS cannot be bypassed.
+
+### What you need
+
+- A VM with at least 1 GB of RAM running Ubuntu 22.04 (arm64 or x86 — the image builds natively
+  either way, so there is no `--platform` flag to remember).
+- A hostname pointed at the VM. Caddy needs one to get a certificate; an IP address will not do.
+  Use a domain you own, or register a free `something.duckdns.org` at
+  <https://www.duckdns.org> in about a minute.
+- Inbound TCP ports **80 and 443** open to the world. Port 80 is required — Caddy uses it for the
+  certificate challenge and to redirect to HTTPS.
+
+### 1. Point a hostname at the VM
+
+Add a DNS `A` record for your hostname pointing at the VM's public IP. If the IP can change (many
+clouds hand out ephemeral IPs that move when the VM restarts), reserve a static one first so DNS
+does not break on the next reboot.
+
+### 2. Open ports 80 and 443
+
+Open both in your cloud provider's firewall / security group, source `0.0.0.0/0`, protocol TCP.
+
+Some images (notably Oracle's Ubuntu) *also* ship restrictive local `iptables` rules that must be
+opened separately — opening only the cloud firewall leaves the port silently unreachable. See
+[deploy/oracle-setup.md](deploy/oracle-setup.md#2-open-the-ports--in-both-places) for that case.
+Verify from your laptop before continuing: `nc -vz <vm-ip> 80` should connect.
+
+### 3. Install Docker
 
 ```bash
-echo "THAVALON_DOMAIN=thavalon.example.com" > .env
+sudo apt-get update && sudo apt-get install -y ca-certificates curl git
+curl -fsSL https://get.docker.com | sudo sh
+sudo usermod -aG docker $USER
+```
+
+Log out and back in so the group membership applies (`docker ps` should then work without `sudo`).
+
+### 4. (Only on a 1 GB VM) add swap
+
+The image compiles with Maven inside the container, which needs more than 1 GB. On a 1 GB shape,
+add swap first or the build is OOM-killed partway through:
+
+```bash
+sudo fallocate -l 2G /swapfile && sudo chmod 600 /swapfile
+sudo mkswap /swapfile && sudo swapon /swapfile
+echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+```
+
+On such a shape also cap the heap explicitly — in `compose.yaml`, under the `thavalon` service:
+
+```yaml
+environment:
+  JAVA_OPTS: "-Xmx256m -XX:+UseSerialGC -XX:TieredStopAtLevel=1"
+```
+
+Skip this whole step on a VM with 2 GB or more.
+
+### 5. Deploy
+
+```bash
+git clone <your-fork> thavalon && cd thavalon
+echo "THAVALON_DOMAIN=something.duckdns.org" > .env
 docker compose up -d --build
 ```
 
-Caddy terminates TLS and gets a certificate automatically. The app is not published to the host,
-so there is no way to reach it except over HTTPS.
+The first build takes a few minutes — it compiles inside the container — and Caddy then fetches a
+certificate on the first request to your hostname.
+
+### 6. Verify
+
+```bash
+curl https://something.duckdns.org/api/health     # {"status":"ok"}
+docker compose logs -f
+```
+
+If TLS never comes up, it is almost always a closed port from step 2 — recheck the local
+`iptables` rules if your provider has them.
+
+### Operating it
+
+```bash
+docker compose logs -f thavalon      # application log, audit lines included
+docker compose restart thavalon      # games survive; state is on the volume
+docker compose up -d --build         # deploy a new version
+```
+
+Game state lives on the `thavalon-data` volume and is reloaded on boot, so restarts and redeploys
+do not interrupt a game in progress.
+
+### Backups
+
+The data volume is small enough to copy wholesale:
+
+```bash
+docker run --rm -v thavalon_thavalon-data:/data -v $(pwd):/backup alpine \
+  tar czf /backup/thavalon-$(date +%F).tar.gz -C /data .
+```
 
 ## Configuration
 

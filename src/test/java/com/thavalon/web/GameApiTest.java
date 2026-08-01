@@ -335,6 +335,7 @@ class GameApiTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.state").value("DEALT"));
 
+        List<String> expectedRoster = sessions.stream().map(Session::name).toList();
         Set<String> roles = new HashSet<>();
         for (Session session : sessions) {
             JsonNode card = me(session);
@@ -342,6 +343,10 @@ class GameApiTest {
             assertThat(card.get("role").asText()).isNotBlank();
             assertThat(card.get("team").asText()).isIn("GOOD", "EVIL");
             assertThat(card.get("description").asText()).isNotBlank();
+            // Every player's card carries the full roster, in join order.
+            List<String> roster = new ArrayList<>();
+            card.get("players").forEach(p -> roster.add(p.asText()));
+            assertThat(roster).isEqualTo(expectedRoster);
             roles.add(card.get("role").asText());
         }
         assertThat(roles).as("every player has a unique role").hasSize(7);

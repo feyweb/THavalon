@@ -69,7 +69,9 @@ public final class Api {
             String description,
             List<String> info,
             boolean assassin,
-            boolean host) {
+            boolean host,
+            /** Everyone in the game, in join order — names only, the same public roster the lobby shows. */
+            List<String> players) {
 
         public static MeResponse of(Game game, Player me) {
             return new MeResponse(
@@ -81,7 +83,8 @@ public final class Api {
                     me.getRole() == null ? null : me.getRole().description(),
                     me.getInfo(),
                     me.isAssassin(),
-                    game.isHost(me.getToken()));
+                    game.isHost(me.getToken()),
+                    game.getPlayers().stream().map(Player::getName).toList());
         }
     }
 
