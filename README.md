@@ -27,8 +27,7 @@ numbers. Read the upstream README for the actual rules of play.
 ## Why this exists
 
 This is a port of the role logic — same roles, same distribution table, same information
-rules — with the crash fixed and the cards delivered privately. Where the two differ, the
-differences are listed under [Deliberate differences](#deliberate-differences) below.
+rules. Where the two differ, the differences are listed under [Deliberate differences](#deliberate-differences) below.
 
 ## Running it locally
 
