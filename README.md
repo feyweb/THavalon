@@ -26,13 +26,7 @@ numbers. Read the upstream README for the actual rules of play.
 
 ## Why this exists
 
-The reference implementation is a Python script that writes one text file per player into a
-`game/` directory. That means one machine, everyone taking turns at it, and secrecy resting on
-nobody opening `game/DoNotOpen`. It also crashes: its lone-lover repair path calls
-`random.sample()` on a `set`, removed in Python 3.11, and its replacement pool is empty at 6 and
-10 players regardless of version. Measured 4 crashes in 40 ten-player runs on Python 3.13.
-
-This is a faithful port of the role logic — same roles, same distribution table, same information
+This is a port of the role logic — same roles, same distribution table, same information
 rules — with the crash fixed and the cards delivered privately. Where the two differ, the
 differences are listed under [Deliberate differences](#deliberate-differences) below.
 
