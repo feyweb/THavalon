@@ -34,7 +34,8 @@ class GameStorePersistenceTest {
     }
 
     private ThavalonProperties props(Path dir) {
-        return new ThavalonProperties(dir.toString(), Duration.ofHours(6), Duration.ZERO);
+        return new ThavalonProperties(dir.toString(), Duration.ofHours(6), Duration.ZERO,
+                Duration.ofDays(30));
     }
 
     private GameService serviceOver(Path dir, GameStore store) {

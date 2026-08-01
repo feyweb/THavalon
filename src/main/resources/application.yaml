@@ -27,6 +27,8 @@ thavalon:
   # A game's audit stays sealed this long after the deal, so it cannot be read mid-game.
   # The host pressing Reveal opens it immediately.
   audit-unlock-after: ${THAVALON_AUDIT_UNLOCK_AFTER:PT4H}
+  # A finished game's audit trail (its Past games entry) is kept this long, then deleted.
+  audit-retention: ${THAVALON_AUDIT_RETENTION:P30D}
 
 logging:
   level:

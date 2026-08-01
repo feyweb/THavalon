@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.thavalon.game.ThavalonProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -35,10 +36,12 @@ public class AuditLog {
 
     private final ObjectMapper mapper;
     private final Path auditDir;
+    private final ThavalonProperties properties;
     private final Object writeLock = new Object();
 
     public AuditLog(ObjectMapper mapper, ThavalonProperties properties) {
         this.mapper = mapper;
+        this.properties = properties;
         this.auditDir = Path.of(properties.dataDir()).resolve("audit");
         // Created here rather than in a lifecycle hook so the object is usable the moment it
         // exists, whether Spring built it or a test did.
@@ -186,6 +189,50 @@ public class AuditLog {
                 .count();
         long left = events.stream().filter(e -> e.type() == AuditEventType.PLAYER_LEFT).count();
         return (int) Math.max(0, joined - left);
+    }
+
+    /**
+     * Deletes audit trails whose last activity is older than {@code thavalon.audit-retention}.
+     * Trails are otherwise never removed — this is the only thing that bounds the Past games list,
+     * so it does not grow without end. A game snapshot is swept far sooner (at {@code gameTtl});
+     * this governs only the reveal history that outlives it.
+     *
+     * <p>Last-modified time stands in for the last event: the file is append-only, so the two move
+     * together, and it avoids re-parsing every trail on every pass.
+     */
+    @Scheduled(fixedDelayString = "PT1H")
+    void sweepOldTrails() {
+        Instant cutoff = Instant.now().minus(properties.auditRetention());
+        int removed = 0;
+        try (Stream<Path> files = Files.list(auditDir)) {
+            List<Path> old = files
+                    .filter(p -> p.toString().endsWith(".jsonl"))
+                    .filter(p -> lastModified(p).isBefore(cutoff))
+                    .toList();
+            for (Path p : old) {
+                try {
+                    Files.deleteIfExists(p);
+                    removed++;
+                } catch (IOException e) {
+                    log.warn("Could not delete expired audit trail {}: {}", p, e.getMessage());
+                }
+            }
+        } catch (IOException e) {
+            log.warn("Could not sweep audit directory: {}", e.getMessage());
+        }
+        if (removed > 0) {
+            log.info("Swept {} audit trail(s) past retention", removed);
+        }
+    }
+
+    /** A trail we cannot stat is treated as fresh, so a transient error never deletes it. */
+    private Instant lastModified(Path path) {
+        try {
+            return Files.getLastModifiedTime(path).toInstant();
+        } catch (IOException e) {
+            log.warn("Could not stat audit trail {}: {}", path, e.getMessage());
+            return Instant.now();
+        }
     }
 
     private Path pathFor(String auditKey) {

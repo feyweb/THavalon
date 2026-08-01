@@ -159,7 +159,9 @@ docker run --rm -v thavalon_thavalon-data:/data -v $(pwd):/backup alpine \
 |---|---|---|
 | `PORT` | `8080` | HTTP port |
 | `THAVALON_DATA_DIR` | `./data` | Where game state is written |
-| `THAVALON_GAME_TTL` | `PT6H` | Idle time before a game is deleted |
+| `THAVALON_GAME_TTL` | `PT6H` | Idle time before a playable game is deleted |
+| `THAVALON_AUDIT_UNLOCK_AFTER` | `PT4H` | Time after the deal before a game's audit opens |
+| `THAVALON_AUDIT_RETENTION` | `P30D` | How long a finished game stays in **Past games** before deletion |
 | `THAVALON_DOMAIN` | — | Hostname for TLS (compose only) |
 
 ## How it works
@@ -184,6 +186,12 @@ docker run --rm -v thavalon_thavalon-data:/data -v $(pwd):/backup alpine \
   a redeploy partway through a game does not wipe anyone's role.
 - **The role card renders once and then stops** — no polling, no repaint — so a screenshot always
   captures a complete, stable card.
+- **Past games** are browsable from the home page. A playable game is swept `THAVALON_GAME_TTL`
+  after its last activity — freeing the ID for reuse — but its audit trail, recording who was
+  dealt which role, outlives it. Each finished game unlocks `THAVALON_AUDIT_UNLOCK_AFTER` after
+  the deal (so a game in progress can never be read), then stays in the list until it is deleted
+  `THAVALON_AUDIT_RETENTION` later. The list shows only games that were actually dealt; abandoned
+  lobbies never appear.
 
 ### Distribution table
 
