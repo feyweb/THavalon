@@ -5,8 +5,8 @@
 A role dealer for [THavalon](https://github.com/aquadrizzt/THavalon), Aquadrizzt's expansion of
 *The Resistance: Avalon* in which every player gets a unique role.
 
-Create a game, everyone joins from their own phone with a four-character game ID, and each player
-sees only their own card. The game itself — proposals, votes, missions, assassination — happens
+Create a game, everyone joins from their own phone with a shared game ID, and each player sees
+only their own card. The game itself — proposals, votes, missions, assassination — happens
 at the table, exactly as it does with a deck of cards.
 
 Supports **5 to 10 players**.
@@ -87,8 +87,11 @@ so there is no way to reach it except over HTTPS.
 - **Roles are dealt with `SecureRandom`**, freshly per game. Nothing is cached anywhere — every
   response carries `Cache-Control: no-store`, because a stale role card is the worst bug this
   app could have.
-- **Reconnect** works off a token in the browser's `localStorage`. A locked phone or a closed tab
-  reopens to the same card rather than erroring or joining twice.
+- **Reconnect** works off a per-player token held in the browser. A locked phone or a closed tab
+  reopens to the same card rather than erroring or joining twice. The token is written to both
+  `sessionStorage` and `localStorage`: the former is per-tab, so several players can sit in one
+  browser without overwriting each other, and the latter outlives the tab so reopening still
+  finds you. Reads prefer the tab's own identity.
 - **Restarts are survivable.** Games are mirrored to a JSON file per game and reloaded on boot, so
   a redeploy partway through a game does not wipe anyone's role.
 - **The role card renders once and then stops** — no polling, no repaint — so a screenshot always
