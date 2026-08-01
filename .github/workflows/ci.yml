@@ -1,0 +1,68 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Nothing here needs write access to the repo.
+permissions:
+  contents: read
+
+# A new push to a branch makes the previous run irrelevant.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: temurin
+          cache: maven
+
+      - name: Run tests
+        run: mvn -B --no-transfer-progress test
+
+      # Without these, a failure on someone else's PR is just a red X with no detail.
+      - name: Upload failure reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: surefire-reports
+          path: target/surefire-reports/
+          retention-days: 7
+
+  docker:
+    name: Docker build
+    # Only on main: it recompiles inside the container, so it would double PR feedback time
+    # for a path that rarely breaks. Still worth catching before a deploy needs it.
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build -t thavalon:ci .
+
+      - name: Check it starts and serves
+        run: |
+          docker run -d --name thavalon -p 8080:8080 thavalon:ci
+          for i in $(seq 1 45); do
+            if curl -fsS http://localhost:8080/api/health > /dev/null 2>&1; then
+              echo "healthy after ${i}s"
+              curl -fsS http://localhost:8080/api/health
+              docker rm -f thavalon
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "did not become healthy"
+          docker logs thavalon
+          exit 1

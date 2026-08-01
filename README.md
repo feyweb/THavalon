@@ -1,5 +1,7 @@
 # THavalon
 
+[![CI](https://github.com/feyweb/THavalon/actions/workflows/ci.yml/badge.svg)](https://github.com/feyweb/THavalon/actions/workflows/ci.yml)
+
 A role dealer for [THavalon](https://github.com/aquadrizzt/THavalon), Aquadrizzt's expansion of
 *The Resistance: Avalon* in which every player gets a unique role.
 
@@ -39,9 +41,13 @@ differences are listed under [Deliberate differences](#deliberate-differences) b
 Requires Java 21.
 
 ```bash
-mvn test          # 100 tests, including a 10k-deal-per-count crash regression
+mvn test          # 123 tests, including a 10,000-game rule simulation
 mvn spring-boot:run
 ```
+
+The suite runs on every pull request. Beyond the usual unit tests it includes a simulation that
+re-derives each player's expected information from the dealt roles independently of the code
+that produced them, and chi-square checks that no seat is favoured for any role.
 
 Open <http://localhost:8080>. To try it properly, join from a couple of private windows and a
 phone on the same network.
