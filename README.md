@@ -5,8 +5,8 @@
 A role dealer for [THavalon](https://github.com/aquadrizzt/THavalon), Aquadrizzt's expansion of
 *The Resistance: Avalon* in which every player gets a unique role.
 
-Create a game, everyone joins from their own phone with a four-character game ID, and each player
-sees only their own card. The game itself — proposals, votes, missions, assassination — happens
+Create a game, everyone joins from their own phone with a shared game ID, and each player sees
+only their own card. The game itself — proposals, votes, missions, assassination — happens
 at the table, exactly as it does with a deck of cards.
 
 Supports **5 to 10 players**.
@@ -76,14 +76,22 @@ so there is no way to reach it except over HTTPS.
 
 ## How it works
 
-- **Game IDs** are four characters from an alphabet with no `O`, `0`, `I` or `1`, so they are
-  unambiguous read aloud across a table. Typing one is case-insensitive and tolerates stray
-  whitespace — `HY6H`, `hy6h` and `  Hy6h  ` all reach the same game.
+- **Game IDs** are chosen by the host — 3 to 12 letters, digits or hyphens — so a group can just
+  agree on `FRIDAY` and reuse it. Leave the field blank and the server generates a four-character
+  one instead, drawn from an alphabet with no `O`, `0`, `I` or `1`: a random string has nothing to
+  help you disambiguate it when read aloud, whereas a chosen word disambiguates itself.
+
+  Either way, typing one is case-insensitive and tolerates stray whitespace — `HY6H`, `hy6h` and
+  `  Hy6h  ` all reach the same game. An ID is only reserved while its game is live, so
+  `FRIDAY` is free again once last week's game expires.
 - **Roles are dealt with `SecureRandom`**, freshly per game. Nothing is cached anywhere — every
   response carries `Cache-Control: no-store`, because a stale role card is the worst bug this
   app could have.
-- **Reconnect** works off a token in the browser's `localStorage`. A locked phone or a closed tab
-  reopens to the same card rather than erroring or joining twice.
+- **Reconnect** works off a per-player token held in the browser. A locked phone or a closed tab
+  reopens to the same card rather than erroring or joining twice. The token is written to both
+  `sessionStorage` and `localStorage`: the former is per-tab, so several players can sit in one
+  browser without overwriting each other, and the latter outlives the tab so reopening still
+  finds you. Reads prefer the tab's own identity.
 - **Restarts are survivable.** Games are mirrored to a JSON file per game and reloaded on boot, so
   a redeploy partway through a game does not wipe anyone's role.
 - **The role card renders once and then stops** — no polling, no repaint — so a screenshot always
@@ -96,17 +104,28 @@ its README flags as unbalanced (6 players get a 33% Evil share; 9 players get 4 
 standard Avalon gives 3). It lives as data in `RoleTable`, so adjusting it is a one-line edit
 that the existing tests still validate.
 
-| Players | Evil | Roles added at this count |
-|---|---|---|
-| 5 | 2 | Nimue |
-| 6 | 2 | — |
-| 7 | 3 | Arthur, Titania |
-| 8 | 3 | Agravaine |
-| 9 | 4 | — |
-| 10 | 4 | Colgrevance |
+| Players | Evil | Newly *eligible* at this count | Good draw | Evil draw |
+|---|---|---|---|---|
+| 5 | 2 | Nimue | 3 of 6 | 2 of 3 |
+| 6 | 2 | — | 4 of 5 | 2 of 3 |
+| 7 | 3 | Arthur, Titania | 4 of 7 | **3 of 3** |
+| 8 | 3 | Agravaine | 5 of 7 | 3 of 4 |
+| 9 | 4 | — | 5 of 7 | **4 of 4** |
+| 10 | 4 | Colgrevance | 6 of 7 | 4 of 5 |
 
 Merlin, Percival, Tristan, Iseult, Lancelot, Mordred, Morgana and Maelagant are eligible at every
-count. Tristan and Iseult always appear as a pair or not at all — at 6 and 10 players the pair is
+count.
+
+Becoming eligible is not the same as appearing. Roles are drawn from the eligible pool, so Nimue
+turns up in about half of 5-player games, Arthur and Titania in a little under 60% of 7-player
+games, and Colgrevance in 80% of 10-player games.
+
+The exceptions are worth knowing at the table: at **7 and 9 players the Evil pool exactly fills
+the Evil seats**, so every Evil role is in play, every game, and the composition is common
+knowledge — the only question is who holds what. Elsewhere there is real uncertainty about which
+Evil roles even exist.
+
+Tristan and Iseult always appear as a pair or not at all. At 6 and 10 players the pair is
 unavoidable, because there are not enough non-lover Good roles to fill the seats without them.
 
 ## Deliberate differences
