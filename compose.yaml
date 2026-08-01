@@ -1,0 +1,32 @@
+services:
+  thavalon:
+    build: .
+    restart: unless-stopped
+    environment:
+      THAVALON_DATA_DIR: /data
+    volumes:
+      - thavalon-data:/data
+    # Not published to the host: Caddy is the only way in, so TLS cannot be bypassed.
+    expose:
+      - "8080"
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      # The hostname Caddy gets a certificate for. Set this in .env
+      THAVALON_DOMAIN: ${THAVALON_DOMAIN:?set THAVALON_DOMAIN in .env}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - thavalon
+
+volumes:
+  thavalon-data:
+  caddy-data:
+  caddy-config:

@@ -1,0 +1,33 @@
+server:
+  port: ${PORT:8080}
+  shutdown: graceful
+  # Behind Caddy, so trust the forwarded headers it sets.
+  forward-headers-strategy: native
+
+spring:
+  application:
+    name: thavalon
+  threads:
+    virtual:
+      enabled: true
+  mvc:
+    problemdetails:
+      enabled: false
+  web:
+    resources:
+      # Static assets must never be cached; NoStoreFilter enforces this on every response.
+      cache:
+        period: 0
+
+thavalon:
+  # Per-game JSON snapshots, so a restart mid-game does not lose anyone's role.
+  data-dir: ${THAVALON_DATA_DIR:./data}
+  # A game is swept this long after its last activity.
+  game-ttl: ${THAVALON_GAME_TTL:PT6H}
+  # A game's audit stays sealed this long after the deal, so it cannot be read mid-game.
+  # The host pressing Reveal opens it immediately.
+  audit-unlock-after: ${THAVALON_AUDIT_UNLOCK_AFTER:PT4H}
+
+logging:
+  level:
+    com.thavalon: INFO

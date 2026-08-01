@@ -1,0 +1,260 @@
+:root {
+  --bg: #f4f1ea;
+  --surface: #fffdf8;
+  --border: #ddd5c4;
+  --text: #241f1a;
+  --muted: #6d6459;
+  --accent: #7a5c1e;
+  --good: #1f5d8c;
+  --good-bg: #e3eef6;
+  --evil: #9b2226;
+  --evil-bg: #f8e5e5;
+  --danger: #9b2226;
+  --radius: 12px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #16130f;
+    --surface: #201c17;
+    --border: #3a332a;
+    --text: #f0eae0;
+    --muted: #a2988a;
+    --accent: #d9b45f;
+    --good: #7cc0ee;
+    --good-bg: #14283a;
+    --evil: #f08a8d;
+    --evil-bg: #3a1618;
+    --danger: #f08a8d;
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 1.25rem 1rem 2.5rem;
+  background: var(--bg);
+  color: var(--text);
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  line-height: 1.5;
+  -webkit-text-size-adjust: 100%;
+}
+
+main { max-width: 30rem; margin: 0 auto; }
+
+h1 {
+  font-size: 1.6rem;
+  letter-spacing: 0.02em;
+  margin: 0 0 0.25rem;
+}
+
+h2 { font-size: 1rem; margin: 0 0 0.75rem; color: var(--muted); font-weight: 600; }
+
+.tagline { color: var(--muted); margin: 0 0 1.5rem; font-size: 0.9rem; }
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.1rem;
+  margin-bottom: 1rem;
+}
+
+label { display: block; font-size: 0.82rem; color: var(--muted); margin-bottom: 0.3rem; }
+
+input {
+  width: 100%;
+  padding: 0.7rem 0.8rem;
+  font-size: 1rem;
+  font-family: inherit;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 0.8rem;
+}
+
+input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+input.code { text-transform: uppercase; letter-spacing: 0.35em; font-weight: 700; text-align: center; }
+
+#host-id { text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; }
+
+.field-hint {
+  margin: -0.5rem 0 0.9rem;
+  font-size: 0.76rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+button {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  font-size: 1rem;
+  font-family: inherit;
+  font-weight: 600;
+  color: var(--bg);
+  background: var(--text);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+button:hover:not(:disabled) { opacity: 0.88; }
+button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+button.secondary {
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--border);
+}
+
+button.danger { background: transparent; color: var(--danger); border: 1px solid var(--danger); }
+
+.error {
+  background: var(--evil-bg);
+  color: var(--evil);
+  border: 1px solid var(--evil);
+  border-radius: 8px;
+  padding: 0.7rem 0.9rem;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  /* Stays visible when the page is scrolled to a form further down. */
+  position: sticky;
+  top: 0.5rem;
+  z-index: 10;
+}
+
+.error:empty { display: none; }
+
+/* ---- lobby ---- */
+
+.game-code {
+  /* IDs run from 3 to 12 characters, so this scales rather than overflowing on a phone. */
+  font-size: clamp(1.5rem, 11vw, 2.6rem);
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-align: center;
+  color: var(--accent);
+  margin: 0.2rem 0 0.1rem;
+  text-indent: 0.18em;
+  overflow-wrap: anywhere;
+}
+
+.code-hint { text-align: center; color: var(--muted); font-size: 0.82rem; margin: 0 0 0.5rem; }
+
+ol.players { list-style: none; margin: 0; padding: 0; counter-reset: seat; }
+
+ol.players li {
+  counter-increment: seat;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+ol.players li:last-child { border-bottom: none; }
+
+ol.players li::before {
+  content: counter(seat);
+  flex: none;
+  width: 1.5rem; height: 1.5rem;
+  display: grid; place-items: center;
+  font-size: 0.72rem; font-weight: 700;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 50%;
+}
+
+.host-tag {
+  margin-left: auto;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  padding: 0.05rem 0.45rem;
+}
+
+.you-tag { margin-left: auto; font-size: 0.72rem; color: var(--muted); }
+.host-tag + .you-tag { margin-left: 0.4rem; }
+
+.status { text-align: center; color: var(--muted); font-size: 0.85rem; margin: 0.75rem 0 0; }
+
+/* ---- role card ---- */
+
+.role-card { padding: 1.4rem 1.2rem; text-align: center; }
+.role-card.good { border-color: var(--good); background: var(--good-bg); }
+.role-card.evil { border-color: var(--evil); background: var(--evil-bg); }
+
+.team-badge {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  padding: 0.2rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+}
+
+.good .team-badge { color: var(--good); }
+.evil .team-badge { color: var(--evil); }
+
+.role-name {
+  font-size: clamp(2rem, 12vw, 2.9rem);
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  margin: 0.5rem 0 0.1rem;
+  line-height: 1.05;
+}
+
+.good .role-name { color: var(--good); }
+.evil .role-name { color: var(--evil); }
+
+.player-name { color: var(--muted); font-size: 0.85rem; margin: 0 0 0.9rem; }
+
+.description {
+  text-align: left;
+  font-size: 0.87rem;
+  white-space: pre-line;
+  margin: 0;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--border);
+}
+
+.info-block { text-align: left; margin-top: 0.9rem; padding-top: 0.9rem; border-top: 1px solid var(--border); }
+.info-block h3 {
+  font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.14em;
+  color: var(--muted); margin: 0 0 0.5rem; font-weight: 700;
+}
+.info-block ul { list-style: none; margin: 0; padding: 0; }
+.info-block li { font-size: 0.95rem; font-weight: 600; padding: 0.18rem 0; }
+
+.assassin-note {
+  margin-top: 0.9rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--evil);
+}
+
+/* ---- reveal ---- */
+
+table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+th, td { text-align: left; padding: 0.45rem 0.3rem; border-bottom: 1px solid var(--border); }
+th { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
+td.good { color: var(--good); font-weight: 600; }
+td.evil { color: var(--evil); font-weight: 600; }
+
+.footer-links { text-align: center; margin-top: 1.5rem; }
+.footer-links a { color: var(--muted); font-size: 0.82rem; }
+
+.spacer { height: 0.6rem; }
+
+.hidden { display: none !important; }

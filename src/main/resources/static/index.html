@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <title>THavalon</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+  <h1>THavalon</h1>
+  <p class="tagline">Deals every player a secret role. The game itself happens at the table.</p>
+
+  <div id="error" class="error"></div>
+
+  <div id="rejoin" class="card hidden">
+    <h2>You were in a game</h2>
+    <button id="rejoin-btn" class="secondary">Rejoin <span id="rejoin-code"></span></button>
+  </div>
+
+  <div class="card">
+    <h2>New game</h2>
+    <label for="host-id">Game ID</label>
+    <input id="host-id" maxlength="12" autocapitalize="characters"
+           autocomplete="off" spellcheck="false" placeholder="e.g. FRIDAY">
+    <p class="field-hint">3–12 letters, digits or hyphens. Leave blank for a random one.</p>
+    <label for="host-name">Your name</label>
+    <input id="host-name" maxlength="20" autocomplete="nickname" placeholder="e.g. Morgan">
+    <p class="field-hint">You'll be the host — you start the game once everyone has joined.</p>
+    <button id="create-btn">Create game</button>
+  </div>
+
+  <div class="card">
+    <h2>Join a game</h2>
+    <label for="join-code">Game ID</label>
+    <input id="join-code" class="code" maxlength="12" autocapitalize="characters"
+           autocomplete="off" spellcheck="false" placeholder="XXXX">
+    <label for="join-name">Your name</label>
+    <input id="join-name" maxlength="20" autocomplete="nickname" placeholder="e.g. Morgan">
+    <button id="join-btn">Join game</button>
+  </div>
+</main>
+
+<script src="app.js"></script>
+<script>
+  // A page that bounced us back here explains why.
+  const notice = sessionStorage.getItem('thavalon:notice');
+  if (notice) {
+    sessionStorage.removeItem('thavalon:notice');
+    showError(notice);
+  }
+
+  const last = store.lastGame();
+  if (last) {
+    document.getElementById('rejoin').classList.remove('hidden');
+    document.getElementById('rejoin-code').textContent = last;
+    document.getElementById('rejoin-btn').addEventListener('click', () => goTo('lobby.html', last));
+  }
+
+  onClick('create-btn', async () => {
+    const name = document.getElementById('host-name').value.trim();
+    const gameId = document.getElementById('host-id').value.trim().toUpperCase();
+    if (!name) throw new Error('Enter your name first.');
+    const game = await api('/api/games', { method: 'POST', body: { name, gameId } });
+    store.remember(game.gameId, game.playerToken);
+    goTo('lobby.html', game.gameId);
+  });
+
+  onClick('join-btn', async () => {
+    const code = document.getElementById('join-code').value.trim().toUpperCase();
+    const name = document.getElementById('join-name').value.trim();
+    if (!code) throw new Error('Enter the game ID.');
+    if (!name) throw new Error('Enter your name.');
+
+    const joined = await api(`/api/games/${encodeURIComponent(code)}/players`,
+      { method: 'POST', body: { name } });
+    store.remember(joined.gameId, joined.playerToken);
+    goTo('lobby.html', joined.gameId);
+  });
+
+  submitOnEnter('host-id', 'create-btn');
+  submitOnEnter('host-name', 'create-btn');
+  submitOnEnter('join-code', 'join-btn');
+  submitOnEnter('join-name', 'join-btn');
+</script>
+</body>
+</html>

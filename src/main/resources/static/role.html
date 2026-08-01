@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <title>Your role</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+  <div id="error" class="error"></div>
+
+  <!-- Rendered once and then left alone: nothing repaints while you are taking a screenshot. -->
+  <div class="card role-card hidden" id="card">
+    <span class="team-badge" id="team"></span>
+    <h1 class="role-name" id="role"></h1>
+    <p class="player-name" id="name"></p>
+
+    <p class="description" id="description"></p>
+
+    <div class="info-block hidden" id="info-block">
+      <h3>What you know</h3>
+      <ul id="info"></ul>
+    </div>
+
+    <p class="assassin-note hidden" id="assassin">You are the Assassin</p>
+  </div>
+
+  <div class="footer-links">
+    <a href="index.html">Leave this game</a>
+  </div>
+</main>
+
+<script src="app.js"></script>
+<script>
+  const gameId = gameIdFromUrl();
+
+  (async () => {
+    if (!store.token(gameId)) {
+      location.replace('index.html');
+      return;
+    }
+    try {
+      const me = await api(`/api/games/${gameId}/me`, { gameId });
+
+      if (me.state === 'LOBBY') {
+        goTo('lobby.html', gameId);
+        return;
+      }
+
+      const card = document.getElementById('card');
+      card.classList.add(me.team === 'EVIL' ? 'evil' : 'good');
+      document.getElementById('team').textContent = me.team === 'EVIL' ? 'Evil' : 'Good';
+      document.getElementById('role').textContent = me.role;
+      document.getElementById('name').textContent = me.name;
+      document.getElementById('description').textContent = me.description;
+
+      if (me.info && me.info.length) {
+        document.getElementById('info-block').classList.remove('hidden');
+        const list = document.getElementById('info');
+        for (const line of me.info) {
+          const li = document.createElement('li');
+          li.textContent = line;
+          list.append(li);
+        }
+      }
+
+      if (me.assassin) {
+        document.getElementById('assassin').classList.remove('hidden');
+      }
+
+      card.classList.remove('hidden');
+    } catch (e) {
+      // A token this game does not recognise — most likely left over from an earlier game that
+      // reused the same ID. Send them back to rejoin rather than showing a dead end.
+      if (e.status === 401) {
+        store.forget(gameId);
+        sessionStorage.setItem('thavalon:notice', `You are not in ${gameId} any more. Join again to play.`);
+        location.replace('index.html');
+        return;
+      }
+      showError(e.message);
+    }
+  })();
+
+  function escapeHtml(value) {
+    const div = document.createElement('div');
+    div.textContent = value ?? '';
+    return div.innerHTML;
+  }
+</script>
+</body>
+</html>

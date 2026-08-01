@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <title>THavalon lobby</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+  <h1>Lobby</h1>
+
+  <div id="error" class="error"></div>
+
+  <div class="card">
+    <p class="game-code" id="code">····</p>
+    <p class="code-hint">Everyone types this game ID to join</p>
+  </div>
+
+  <div class="card">
+    <h2><span id="count">0</span> of 10 players</h2>
+    <ol class="players" id="players"></ol>
+    <p class="status" id="status">Waiting for players…</p>
+  </div>
+
+  <button id="start-btn" class="hidden" disabled>Start game</button>
+  <div class="spacer"></div>
+  <button id="leave-btn" class="danger">Leave</button>
+</main>
+
+<script src="app.js"></script>
+<script>
+  const gameId = gameIdFromUrl();
+  const POLL_MS = 2000;
+
+  document.getElementById('code').textContent = gameId;
+
+  /**
+   * Sends the player back to the front page to rejoin, discarding a credential that this game
+   * does not recognise. Game IDs are reusable, so a token left over from an earlier game with
+   * the same ID would otherwise leave you stuck: visible lobby, no Start button, and a Leave
+   * that fails.
+   */
+  function rejoin(message) {
+    store.forget(gameId);
+    sessionStorage.setItem('thavalon:notice', message);
+    location.replace('index.html');
+  }
+
+  if (!store.token(gameId)) {
+    rejoin(`Join ${gameId} to see the lobby.`);
+  }
+
+  function render(lobby) {
+    document.getElementById('count').textContent = lobby.players.length;
+
+    const list = document.getElementById('players');
+    list.innerHTML = '';
+    for (const name of lobby.players) {
+      const li = document.createElement('li');
+      li.append(document.createTextNode(name));
+      if (name === lobby.hostName) {
+        const tag = document.createElement('span');
+        tag.className = 'host-tag';
+        tag.textContent = 'host';
+        li.append(tag);
+      }
+      // Mark which of these is you, so it is obvious whether this device can start the game.
+      if (name === lobby.yourName) {
+        const tag = document.createElement('span');
+        tag.className = 'you-tag';
+        tag.textContent = 'you';
+        li.append(tag);
+      }
+      list.append(li);
+    }
+
+    const needed = lobby.minPlayers - lobby.players.length;
+    let status;
+    if (needed > 0) {
+      status = `${needed} more player${needed === 1 ? '' : 's'} needed to start`;
+    } else if (lobby.youAreHost) {
+      status = 'Ready when you are.';
+    } else {
+      // Name the host rather than saying "the host" — otherwise nobody knows whose screen to
+      // look at, and the person who created the game cannot tell they are on the wrong device.
+      status = `${lobby.hostName} is the host and starts the game from their own device.`;
+    }
+    document.getElementById('status').textContent = status;
+
+    const start = document.getElementById('start-btn');
+    start.classList.toggle('hidden', !lobby.youAreHost);
+    start.disabled = !lobby.canStart;
+  }
+
+  async function poll() {
+    try {
+      const lobby = await api(`/api/games/${gameId}`, { gameId });
+
+      // The game exists but does not know this device — a stale token from an earlier game
+      // that reused this ID. Recover rather than sitting here looking like a spectator.
+      if (!lobby.yourName) {
+        rejoin(`You are not in ${gameId} any more. Join again to play.`);
+        return;
+      }
+
+      if (lobby.state === 'DEALT') {
+        goTo('role.html', gameId);
+        return;
+      }
+      render(lobby);
+      showError('');
+    } catch (e) {
+      if (e.status === 404) {
+        showError('This game no longer exists.');
+        return;   // stop polling a game that is gone
+      }
+      showError(e.message);
+    }
+    setTimeout(poll, POLL_MS);
+  }
+
+  onClick('start-btn', async () => {
+    await api(`/api/games/${gameId}/start`, { method: 'POST', gameId });
+    goTo('role.html', gameId);
+  });
+
+  onClick('leave-btn', async () => {
+    try {
+      await api(`/api/games/${gameId}/players/me`, { method: 'DELETE', gameId });
+    } catch (e) {
+      // Already not a player here — leaving has effectively succeeded either way.
+      if (e.status !== 401 && e.status !== 404) throw e;
+    }
+    store.forget(gameId);
+    location.replace('index.html');
+  });
+
+  poll();
+</script>
+</body>
+</html>

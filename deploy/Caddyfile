@@ -1,0 +1,22 @@
+{$THAVALON_DOMAIN} {
+	# Caddy obtains and renews a Let's Encrypt certificate on its own. Nothing to configure,
+	# provided ports 80 and 443 reach this machine — see deploy/oracle-setup.md, which is the
+	# part that usually goes wrong.
+	encode gzip
+
+	reverse_proxy thavalon:8080 {
+		header_up X-Forwarded-Proto {scheme}
+	}
+
+	header {
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy no-referrer
+		-Server
+	}
+
+	log {
+		output stdout
+		format console
+	}
+}
