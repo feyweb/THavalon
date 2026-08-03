@@ -27,6 +27,11 @@
     <p class="assassin-note hidden" id="assassin">You are the Assassin</p>
   </div>
 
+  <div class="card hidden" id="roster-card">
+    <h2><span id="player-count">0</span> players in this game</h2>
+    <ol class="players" id="players"></ol>
+  </div>
+
   <div class="footer-links">
     <a href="index.html">Leave this game</a>
   </div>
@@ -71,6 +76,24 @@
       }
 
       card.classList.remove('hidden');
+
+      if (me.players && me.players.length) {
+        document.getElementById('player-count').textContent = me.players.length;
+        const roster = document.getElementById('players');
+        for (const name of me.players) {
+          const li = document.createElement('li');
+          li.append(document.createTextNode(name));
+          // Mark which of these is you, matching how the lobby flags it.
+          if (name === me.name) {
+            const tag = document.createElement('span');
+            tag.className = 'you-tag';
+            tag.textContent = 'you';
+            li.append(tag);
+          }
+          roster.append(li);
+        }
+        document.getElementById('roster-card').classList.remove('hidden');
+      }
     } catch (e) {
       // A token this game does not recognise — most likely left over from an earlier game that
       // reused the same ID. Send them back to rejoin rather than showing a dead end.

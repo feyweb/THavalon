@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <title>Past games</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+  <h1>Past games</h1>
+  <p class="tagline">Finished games and the roles that were dealt. A game appears here once it is
+    over, and is kept for a month.</p>
+
+  <div id="error" class="error"></div>
+
+  <p class="status" id="loading">Loading…</p>
+  <div id="empty" class="card hidden"><p class="status">No finished games yet.</p></div>
+  <div id="list"></div>
+
+  <div class="footer-links">
+    <a href="index.html">Back to home</a>
+  </div>
+</main>
+
+<script src="app.js"></script>
+<script>
+  const fmtDate = (iso) => {
+    if (!iso) return '';
+    return new Date(iso).toLocaleDateString(undefined,
+        { year: 'numeric', month: 'short', day: 'numeric' });
+  };
+
+  (async () => {
+    try {
+      const games = await api('/api/audit');
+      // Only games that actually started have roles to show; abandoned lobbies are noise here.
+      const played = games.filter((g) => g.started);
+
+      document.getElementById('loading').classList.add('hidden');
+
+      if (!played.length) {
+        document.getElementById('empty').classList.remove('hidden');
+        return;
+      }
+
+      const list = document.getElementById('list');
+      for (const game of played) {
+        const card = document.createElement('div');
+        card.className = 'card history-item';
+
+        const head = document.createElement('div');
+        head.className = 'history-head';
+        const code = document.createElement('span');
+        code.className = 'history-code';
+        code.textContent = game.gameId;
+        const meta = document.createElement('span');
+        meta.className = 'history-meta';
+        meta.textContent = `${fmtDate(game.startedAt || game.createdAt)} · ${game.playerCount} players`;
+        head.append(code, meta);
+        card.append(head);
+
+        const roles = document.createElement('ol');
+        roles.className = 'players roles';
+        for (const [name, role] of Object.entries(game.roles || {})) {
+          const li = document.createElement('li');
+          const who = document.createElement('span');
+          who.className = 'role-player';
+          who.textContent = name;
+          const what = document.createElement('span');
+          what.className = 'role-name-sm';
+          what.textContent = role;
+          li.append(who, what);
+          roles.append(li);
+        }
+        card.append(roles);
+
+        list.append(card);
+      }
+    } catch (e) {
+      document.getElementById('loading').classList.add('hidden');
+      showError(e.message);
+    }
+  })();
+</script>
+</body>
+</html>
