@@ -121,6 +121,24 @@ class RandomnessTest {
         return org.assertj.core.data.Offset.offset(tolerance);
     }
 
+    /**
+     * How far an observed rate may stray from its expectation before the run counts as biased:
+     * five standard deviations of the binomial itself, rather than a flat percentage.
+     *
+     * <p>A flat bound is either too tight for a small sample or too loose for a large one. The
+     * ±0.05 these assertions used to carry sat at 3.2σ for a 1000-game run, which fails by chance
+     * on 1.2% of runs — measured, and matching the 1.24% the normal approximation predicts. Across
+     * the three assertions that used it, that made roughly one CI run in thirty red for no reason,
+     * which is the fastest way to teach everyone to re-run a red build without reading it.
+     *
+     * <p>At 5σ the false-failure rate is under one in a million per seat, while the bugs these
+     * tests exist to catch — a hash-ordered collection, an off-by-one in a shuffle, a seat that
+     * can never be Evil — move a rate by tens of σ and are still caught on the first run.
+     */
+    private static double fiveSigma(double p, int games) {
+        return 5 * Math.sqrt(p * (1 - p) / games);
+    }
+
     @Test
     @DisplayName("1000 games per count: every seat gets every role at the rate chance predicts")
     void noSeatOrRoleBias() {
@@ -177,10 +195,11 @@ class RandomnessTest {
                     "%.3f..%.3f (exp %.3f)".formatted(minEvil, maxEvil, expectedEvil),
                     "%s x2=%.1f".formatted(worstRole, worstChiSquare));
 
+            double tolerance = fiveSigma(expectedEvil, gamesPerCount);
             assertThat(minEvil).as("lowest Evil rate at %d players", players)
-                    .isCloseTo(expectedEvil, within(0.05));
+                    .isCloseTo(expectedEvil, within(tolerance));
             assertThat(maxEvil).as("highest Evil rate at %d players", players)
-                    .isCloseTo(expectedEvil, within(0.05));
+                    .isCloseTo(expectedEvil, within(tolerance));
             assertThat(worstChiSquare)
                     .as("worst per-seat role distribution at %d players (%s)", players, worstRole)
                     .isLessThan(45.0);
@@ -243,9 +262,16 @@ class RandomnessTest {
                 n, n.hashCode(), 100.0 * evil.getOrDefault(n, 0) / games));
         System.out.println();
 
+        // Every colliding name must appear in the map at all. A name that was never once dealt
+        // Evil would otherwise be absent, and allSatisfy says nothing about absent keys — the
+        // exact bias this test exists to catch could pass silently.
+        assertThat(evil.keySet()).containsExactlyInAnyOrderElementsOf(colliding);
+
+        double expectedEvil =
+                RoleTable.forPlayers(colliding.size()).evilCount() / (double) colliding.size();
         assertThat(evil).allSatisfy((name, count) ->
                 assertThat(count / (double) games).as("Evil rate for %s", name)
-                        .isBetween(0.35, 0.45));
+                        .isCloseTo(expectedEvil, within(fiveSigma(expectedEvil, games))));
     }
 
     @Test
@@ -267,10 +293,14 @@ class RandomnessTest {
         }
         System.out.println();
 
+        // Comparing two independent estimates, so the difference carries sqrt(2) times the
+        // standard deviation of either one.
+        double expectedEvil = RoleTable.forPlayers(PLAYERS).evilCount() / (double) PLAYERS;
+        double tolerance = fiveSigma(expectedEvil, games) * Math.sqrt(2);
         for (String name : names) {
             double a = forward.getOrDefault(name, 0) / (double) games;
             double b = backward.getOrDefault(name, 0) / (double) games;
-            assertThat(a).as("Evil rate for %s is order-independent", name).isCloseTo(b, within(0.05));
+            assertThat(a).as("Evil rate for %s is order-independent", name).isCloseTo(b, within(tolerance));
         }
     }
 
@@ -311,9 +341,12 @@ class RandomnessTest {
                 System.out.printf("  %-4s Evil %5.2f%%%n", name, 100.0 * count / games));
         System.out.println();
 
-        // 4 Evil of 10 seats => 40% each.
+        // 4 Evil of 10 seats => 40% each. Assert presence first: a seat that was never Evil
+        // would be absent from the map, and allSatisfy does not see absent keys.
+        assertThat(evilCount.keySet()).containsExactlyInAnyOrderElementsOf(names);
+        double expectedEvil = RoleTable.forPlayers(PLAYERS).evilCount() / (double) PLAYERS;
         assertThat(evilCount).allSatisfy((name, count) ->
                 assertThat(count / (double) games).as("Evil rate for %s", name)
-                        .isBetween(0.37, 0.43));
+                        .isCloseTo(expectedEvil, within(fiveSigma(expectedEvil, games))));
     }
 }

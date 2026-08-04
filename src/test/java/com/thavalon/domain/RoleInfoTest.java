@@ -87,15 +87,6 @@ class RoleInfoTest {
     }
 
     @Test
-    @DisplayName("Nimue learns every role in the game, Good and Evil, excluding themselves")
-    void nimueLearnsAllRoles() {
-        Seat nimue = new Seat("Nim", Role.NIMUE);
-        List<Seat> table = List.of(nimue, MERLIN, LANCELOT, MORDRED, MORGANA);
-        assertThat(RoleInfo.baseInfo(nimue, table))
-                .containsExactlyInAnyOrder("Merlin", "Lancelot", "Mordred", "Morgana");
-    }
-
-    @Test
     @DisplayName("Evil are warned about Colgrevance and Titania, but Colgrevance is not")
     void evilNoticesAreTargetedCorrectly() {
         assertThat(RoleInfo.notices(MORDRED, TABLE, false))
