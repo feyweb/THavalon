@@ -61,4 +61,37 @@ class ThavalonPropertiesTest {
                 "./data", Duration.ofHours(6), Duration.ofHours(4), Duration.ofHours(5)))
                 .doesNotThrowAnyException();
     }
+
+    /**
+     * The more dangerous inversion. Sweeping a game unseals its audit outright, so a TTL shorter
+     * than the seal opens every trail early — while a game may still be in progress.
+     */
+    @Test
+    @DisplayName("a game TTL shorter than the unlock window is refused at startup")
+    void gameTtlShorterThanUnlockIsRefused() {
+        assertThatThrownBy(() -> new ThavalonProperties(
+                "./data", Duration.ofHours(1), Duration.ofHours(4), Duration.ofDays(30)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("game-ttl")
+                .hasMessageContaining("audit-unlock-after");
+    }
+
+    @Test
+    @DisplayName("a game TTL exactly equal to the unlock window is refused too")
+    void equalTtlAndUnlockAreRefused() {
+        // The sweep runs every 15 minutes, so equal durations race: whether the seal or the
+        // sweep wins is a matter of which timer fires first.
+        assertThatThrownBy(() -> new ThavalonProperties(
+                "./data", Duration.ofHours(4), Duration.ofHours(4), Duration.ofDays(30)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("game-ttl");
+    }
+
+    @Test
+    @DisplayName("the defaults leave the seal expiring two hours before the sweep")
+    void defaultsSealBeforeSweep() {
+        ThavalonProperties p = new ThavalonProperties(null, null, null, null);
+        assertThat(p.gameTtl()).isGreaterThan(p.auditUnlockAfter());
+        assertThat(p.gameTtl().minus(p.auditUnlockAfter())).isEqualTo(Duration.ofHours(2));
+    }
 }
