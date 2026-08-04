@@ -188,9 +188,30 @@ docker run --rm -v thavalon_thavalon-data:/data -v $(pwd):/backup alpine \
 | `PORT` | `8080` | HTTP port |
 | `THAVALON_DATA_DIR` | `./data` | Where game state is written |
 | `THAVALON_GAME_TTL` | `PT6H` | Idle time before a playable game is deleted |
-| `THAVALON_AUDIT_UNLOCK_AFTER` | `PT4H` | Time after the deal before a game's audit opens |
+| `THAVALON_AUDIT_UNLOCK_AFTER` | `PT4H` | Time after the deal before a game's audit opens. **Must exceed your longest game** — see below |
 | `THAVALON_AUDIT_RETENTION` | `P30D` | How long a finished game stays in **Past games** before deletion |
 | `THAVALON_DOMAIN` | — | Hostname for TLS (compose only) |
+
+### The audit seal is a clock, so pick the durations together
+
+A game's audit reveals every player's role and needs no password, so the only thing keeping it
+private during play is `THAVALON_AUDIT_UNLOCK_AFTER`. The server cannot tell when a game ends —
+it deals roles and nothing else — so it seals the trail for a fixed duration from the deal and
+relies on that being longer than a game. The `PT4H` default assumes games under about two hours,
+which is roughly double the headroom needed.
+
+**Lowering it below your longest game exposes roles mid-game, to anyone who can reach the site.**
+Nothing detects that, because the server has no idea how long your games run. If you want to
+review roles sooner after a game, shorten it only as far as your slowest table.
+
+Two related durations are checked at startup, since inverting either breaks the seal in a way
+nothing would report at runtime:
+
+- `THAVALON_AUDIT_RETENTION` must exceed `THAVALON_AUDIT_UNLOCK_AFTER`, or trails are deleted
+  before they ever become readable and games silently never reach **Past games**.
+- `THAVALON_GAME_TTL` must exceed `THAVALON_AUDIT_UNLOCK_AFTER`. Sweeping a game unseals its
+  audit outright — a missing game is treated as one that must be long over — so a shorter TTL
+  opens every trail early.
 
 ## How it works
 
