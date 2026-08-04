@@ -280,12 +280,18 @@ public class GameService {
     }
 
     private boolean isOpen(AuditLog.Summary summary) {
-        if (!summary.started()) {
-            return true;                                   // nothing dealt, nothing to protect
-        }
         Game game = store.find(summary.gameId()).orElse(null);
         // Only the game that owns this trail can seal it; an older trail under a reused ID is done.
         boolean ownsTrail = game != null && summary.auditKey().equals(game.getAuditKey());
+
+        if (!summary.started()) {
+            // No GAME_STARTED event. Usually that means nothing was dealt — an abandoned lobby,
+            // with nothing to protect. But the trail is not the authority on that; the live game
+            // is. If it says the roles are out, this trail is truncated rather than empty, and
+            // {@link #auditFor} answers 410 for exactly that case. Leave such a game out of the
+            // index rather than advertising it as one that was never dealt.
+            return !(ownsTrail && game.getState() != GameState.LOBBY);
+        }
         return !ownsTrail
                 || !Instant.now().isBefore(summary.startedAt().plus(properties.auditUnlockAfter()));
     }

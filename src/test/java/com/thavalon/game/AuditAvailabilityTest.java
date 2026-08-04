@@ -87,6 +87,88 @@ class AuditAvailabilityTest {
         assertThat(view.state()).isEqualTo(GameState.LOBBY);
     }
 
+    /**
+     * The index and the detail endpoint answer the same question — is this game readable yet —
+     * from different sources: the index from the trail, the detail from the live game. When a
+     * trail is truncated those two sources disagree, and only the game is right.
+     */
+    @Test
+    @DisplayName("a dealt game whose trail lost GAME_STARTED is not listed as an undealt lobby")
+    void truncatedTrailIsNotListedAsUndealt(@TempDir Path dir) throws Exception {
+        Fixture f = fixture(dir);
+        dealGame(f.service(), "TRUNCATED");
+        assertThat(f.service().auditIndex()).hasSize(1);            // sanity: listed while intact
+
+        // Drop the GAME_STARTED line, keeping the rest. The file still exists, so the trail is
+        // summarised — it simply looks like a lobby that never dealt.
+        Path trail = f.auditDir().resolve(f.store().find("TRUNCATED").orElseThrow().getAuditKey() + ".jsonl");
+        Files.write(trail, Files.readAllLines(trail).stream()
+                .filter(line -> !line.contains("GAME_STARTED"))
+                .toList());
+
+        // The detail endpoint already refuses this. The index must not contradict it by
+        // advertising the game as never dealt.
+        assertThatThrownBy(() -> f.service().auditFor("TRUNCATED"))
+                .isInstanceOf(GameException.class)
+                .satisfies(e -> assertThat(((GameException) e).code()).isEqualTo("AUDIT_UNAVAILABLE"));
+        assertThat(f.service().auditIndex())
+                .as("a game the detail endpoint calls unavailable must not appear in the index")
+                .isEmpty();
+    }
+
+    /**
+     * The sibling failure mode. A deleted trail is excluded from the index for a different
+     * reason — {@code AuditLog.index} lists files on disk, so there is nothing to summarise —
+     * but the two endpoints must still agree, and this pins that they do.
+     */
+    @Test
+    @DisplayName("a dealt game whose trail is deleted is absent from the index and 410s on detail")
+    void deletedTrailIsAbsentFromIndexToo(@TempDir Path dir) throws Exception {
+        Fixture f = fixture(dir);
+        dealGame(f.service(), "DELETED");
+        assertThat(f.service().auditIndex()).hasSize(1);
+
+        Files.delete(f.auditDir()
+                .resolve(f.store().find("DELETED").orElseThrow().getAuditKey() + ".jsonl"));
+
+        assertThat(f.service().auditIndex())
+                .as("no file, nothing to summarise")
+                .isEmpty();
+        assertThatThrownBy(() -> f.service().auditFor("DELETED"))
+                .isInstanceOf(GameException.class)
+                .satisfies(e -> assertThat(((GameException) e).code()).isEqualTo("AUDIT_UNAVAILABLE"));
+    }
+
+    @Test
+    @DisplayName("a genuinely abandoned lobby is still listed, so the fix is not over-broad")
+    void abandonedLobbyIsStillListed(@TempDir Path dir) {
+        Fixture f = fixture(dir);
+        f.service().createGame("Host", "ABANDONED");
+
+        assertThat(f.service().auditIndex())
+                .as("state is LOBBY, so nothing was dealt and there is nothing to hide")
+                .hasSize(1);
+        assertThat(f.service().auditIndex().getFirst().started()).isFalse();
+    }
+
+    @Test
+    @DisplayName("a swept game's truncated trail is still listed — no live game to contradict it")
+    void sweptGameWithTruncatedTrailIsStillListed(@TempDir Path dir) throws Exception {
+        Fixture f = fixture(dir);
+        dealGame(f.service(), "SWEPTTRUNC");
+
+        Path trail = f.auditDir().resolve(f.store().find("SWEPTTRUNC").orElseThrow().getAuditKey() + ".jsonl");
+        f.store().delete("SWEPTTRUNC");                            // game gone
+        Files.write(trail, Files.readAllLines(trail).stream()
+                .filter(line -> !line.contains("GAME_STARTED"))
+                .toList());
+
+        // With no game left there is no evidence the deal happened, so both endpoints fall
+        // through to the same permissive answer. That matches auditFor, which is the point.
+        assertThat(f.service().auditIndex()).hasSize(1);
+        assertThat(f.service().auditFor("SWEPTTRUNC").roles()).isEmpty();
+    }
+
     @Test
     @DisplayName("a swept game with no trail left is not found, rather than reported as undealt")
     void sweptGameWithNoTrailIsNotFound(@TempDir Path dir) throws Exception {
