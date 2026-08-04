@@ -41,7 +41,10 @@
     <button id="join-btn">Join game</button>
   </div>
 
-  <button id="history-btn" class="secondary" onclick="location.href='history.html'">Past games</button>
+  <!-- An anchor, not a button: this is navigation, so it should keep cmd-click and middle-click,
+       and be announced as a link. An inline onclick would also be the one thing a future
+       Content-Security-Policy silently broke. -->
+  <a id="history-btn" class="button-link secondary" href="history.html">Past games</a>
 </main>
 
 <script src="app.js"></script>

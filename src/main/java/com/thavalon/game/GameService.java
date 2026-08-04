@@ -247,6 +247,14 @@ public class GameService {
             throw GameException.auditSealed(dealt.at().plus(properties.auditUnlockAfter()));
         }
 
+        // The game is known to have been dealt, but its trail carries no GAME_STARTED event, so
+        // the trail is missing or truncated — swept early, or a write that failed. Falling through
+        // would answer with state=DEALT alongside startedAt=null and no roles: a self-contradicting
+        // 200 that reads as "this game was never dealt". Say the data is gone instead.
+        if (dealt == null && game != null && game.getState() != GameState.LOBBY) {
+            throw GameException.auditUnavailable(id);
+        }
+
         @SuppressWarnings("unchecked")
         Map<String, Object> roles = dealt == null
                 ? Map.of()
