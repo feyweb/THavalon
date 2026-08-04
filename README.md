@@ -62,7 +62,7 @@ run and back up on a 1 GB VM.
 Requires Java 21, and `mvn` on your `PATH`.
 
 ```bash
-mvn test          # 125 tests, including a 10,000-game rule simulation
+mvn test          # includes a 10,000-game rule simulation
 mvn spring-boot:run
 ```
 
