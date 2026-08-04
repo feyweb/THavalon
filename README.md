@@ -202,7 +202,7 @@ that the existing tests still validate.
 
 | Players | Evil | Newly *eligible* at this count | Good draw | Evil draw |
 |---|---|---|---|---|
-| 5 | 2 | Nimue | 3 of 6 | 2 of 3 |
+| 5 | 2 | — | 3 of 5 | 2 of 3 |
 | 6 | 2 | — | 4 of 5 | 2 of 3 |
 | 7 | 3 | Arthur, Titania | 4 of 7 | **3 of 3** |
 | 8 | 3 | Agravaine | 5 of 7 | 3 of 4 |
@@ -212,9 +212,18 @@ that the existing tests still validate.
 Merlin, Percival, Tristan, Iseult, Lancelot, Mordred, Morgana and Maelagant are eligible at every
 count.
 
-Becoming eligible is not the same as appearing. Roles are drawn from the eligible pool, so Nimue
-turns up in about half of 5-player games, Arthur and Titania in a little under 60% of 7-player
-games, and Colgrevance in 80% of 10-player games.
+Becoming eligible is not the same as appearing. Roles are drawn from the eligible pool, so Arthur
+and Titania turn up in a little under 60% of 7-player games, and Colgrevance in 80% of 10-player
+games.
+
+**Nimue is not played here.** The reference implementation makes her eligible at 5 players only;
+this group does not use her, so she is not in `Role` at all and cannot be dealt at any count. That
+is why 5 players draw 3 Good from the same core five that 6 players draw 4 from.
+
+One consequence at the table: upstream lists three priority Assassination targets — Merlin, the
+Lovers as a pair, and Nimue. Without her there are two, so the Assassin can only call Merlin or
+the Lovers. Nothing here enforces that either way; this app deals roles and never runs the
+Assassination phase.
 
 The exceptions are worth knowing at the table: at **7 and 9 players the Evil pool exactly fills
 the Evil seats**, so every Evil role is in play, every game, and the composition is common
@@ -226,11 +235,12 @@ unavoidable, because there are not enough non-lover Good roles to fill the seats
 
 ## Deliberate differences
 
-Everything about the roles matches the reference implementation. These are the places this
-rewrite knowingly departs from it:
+The information rules for every role that is played match the reference implementation exactly.
+These are the places this rewrite knowingly departs from it:
 
 | | Reference | Here |
 |---|---|---|
+| **Nimue** | Eligible at 5 players | Not played here — removed from `Role`, so she cannot be dealt at any count |
 | **Lone-lover repair** | Crashes when the replacement pool is empty — 6 and 10 players always, and `random.sample()` on a `set` fails at every count on Python 3.11+ | Falls through to the upgrade-to-a-pair branch, which is always viable |
 | **First proposer** | Nominated at random and written to `game/start` | Not nominated; the table decides for itself |
 | **Delivery** | One text file per player, plus `game/DoNotOpen` holding every role | Per-player web view behind a private token; no file anyone can peek at |
