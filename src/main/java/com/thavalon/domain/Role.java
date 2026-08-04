@@ -4,8 +4,10 @@ import static com.thavalon.domain.Team.EVIL;
 import static com.thavalon.domain.Team.GOOD;
 
 /**
- * The THavalon roles. Descriptions are ported verbatim from {@code get_role_description}
- * in the reference implementation (aquadrizzt/THavalon, thavalon.py:8-24).
+ * The THavalon roles. Descriptions are ported word-for-word from {@code get_role_description}
+ * in the reference implementation (aquadrizzt/THavalon, thavalon.py:8-24), with one exception:
+ * Colgrevance's reads "possesses" where the original reads "possess". These strings are printed
+ * on a player's role card, so the typo is not worth reproducing.
  *
  * <p>Nimue is deliberately absent: this group does not play her. She was the reference
  * implementation's only 5-player-exclusive role, so dropping her leaves the 5-player Good pool

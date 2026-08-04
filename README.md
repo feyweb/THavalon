@@ -220,6 +220,11 @@ games.
 this group does not use her, so she is not in `Role` at all and cannot be dealt at any count. That
 is why 5 players draw 3 Good from the same core five that 6 players draw 4 from.
 
+One consequence at the table: upstream lists three priority Assassination targets — Merlin, the
+Lovers as a pair, and Nimue. Without her there are two, so the Assassin can only call Merlin or
+the Lovers. Nothing here enforces that either way; this app deals roles and never runs the
+Assassination phase.
+
 The exceptions are worth knowing at the table: at **7 and 9 players the Evil pool exactly fills
 the Evil seats**, so every Evil role is in play, every game, and the composition is common
 knowledge — the only question is who holds what. Elsewhere there is real uncertainty about which
