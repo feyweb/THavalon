@@ -29,12 +29,40 @@ numbers. Read the upstream README for the actual rules of play.
 This is a port of the role logic — same roles, same distribution table, same information
 rules. Where the two differ, the differences are listed under [Deliberate differences](#deliberate-differences) below.
 
+## How it's built
+
+| Layer | What it is |
+|---|---|
+| Language | Java 21 — virtual threads enabled, so a request per player costs almost nothing |
+| Framework | Spring Boot 3.3, with only `starter-web`, `starter-validation` and `starter-test` |
+| Build | Maven, single module. No wrapper is committed, so `mvn` must be on your `PATH` |
+| Frontend | Four hand-written HTML pages, one `app.js`, one `style.css` |
+| Storage | One JSON file per game on disk. No database |
+| Container | Multi-stage Docker — `maven:3.9-eclipse-temurin-21` builds, `eclipse-temurin:21-jre-alpine` runs, as a non-root user |
+| Edge | Caddy 2, for automatic TLS. The app is never published to the host |
+| CI | GitHub Actions: `mvn test` on Java 21, then a `docker build` |
+
+**There is no Node, npm or JavaScript build step anywhere.** The frontend is plain HTML, CSS and
+browser JavaScript in [`src/main/resources/static`](src/main/resources/static), served directly by
+Spring Boot — no bundler, no `package.json`, no `node_modules`, no framework. It also loads nothing
+from a CDN: `app.js` and `style.css` are the only two assets the pages pull, both same-origin. So
+the whole app is one `mvn` build producing one jar, and the browser gets the files as written.
+
+That is a deliberate ceiling on complexity rather than a limitation to route around. The client's
+entire job is to show one player their own card and poll a lobby, which needs no framework — and
+avoiding the second toolchain is what keeps the container a single build stage and the deploy a
+single `docker compose up`.
+
+Persistence is files for the same reason: a game is a handful of role assignments that must survive
+a restart mid-game, which a JSON file per game does, and a database would mean another container to
+run and back up on a 1 GB VM.
+
 ## Running it locally
 
-Requires Java 21.
+Requires Java 21, and `mvn` on your `PATH`.
 
 ```bash
-mvn test          # 123 tests, including a 10,000-game rule simulation
+mvn test          # 125 tests, including a 10,000-game rule simulation
 mvn spring-boot:run
 ```
 
