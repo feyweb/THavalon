@@ -56,12 +56,6 @@ class RoleTableTest {
     @Test
     @DisplayName("count-restricted roles appear only at their supported counts")
     void countRestrictedRolesAreGated() {
-        // Nimue: 5 players only (thavalon.py:105-106)
-        assertThat(RoleTable.forPlayers(5).goodPool()).contains(Role.NIMUE);
-        for (int n = 6; n <= 10; n++) {
-            assertThat(RoleTable.forPlayers(n).goodPool()).doesNotContain(Role.NIMUE);
-        }
-
         // Arthur and Titania: 7+ players (thavalon.py:109-111)
         for (int n = 5; n <= 6; n++) {
             assertThat(RoleTable.forPlayers(n).goodPool()).doesNotContain(Role.ARTHUR, Role.TITANIA);
@@ -94,6 +88,18 @@ class RoleTableTest {
                     .filter(r -> r != Role.COLGREVANCE).count();
             // Even if Colgrevance is drawn, enough other Evil roles remain to fill the seats.
             assertThat(nonColgrevance).isGreaterThanOrEqualTo(config.evilCount() - 1L);
+        }
+    }
+
+    @Test
+    @DisplayName("Nimue does not exist — she is not a role, and no pool can offer her")
+    void nimueIsNotPlayed() {
+        assertThat(Role.values()).extracting(Role::name).doesNotContain("NIMUE");
+        assertThat(Role.values()).extracting(Role::displayName).doesNotContain("Nimue");
+        for (int n = RoleTable.MIN_PLAYERS; n <= RoleTable.MAX_PLAYERS; n++) {
+            RoleTable.Config config = RoleTable.forPlayers(n);
+            assertThat(config.goodPool()).extracting(Role::displayName).doesNotContain("Nimue");
+            assertThat(config.evilPool()).extracting(Role::displayName).doesNotContain("Nimue");
         }
     }
 

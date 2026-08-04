@@ -6,6 +6,10 @@ import static com.thavalon.domain.Team.GOOD;
 /**
  * The THavalon roles. Descriptions are ported verbatim from {@code get_role_description}
  * in the reference implementation (aquadrizzt/THavalon, thavalon.py:8-24).
+ *
+ * <p>Nimue is deliberately absent: this group does not play her. She was the reference
+ * implementation's only 5-player-exclusive role, so dropping her leaves the 5-player Good pool
+ * equal to the always-eligible core five and changes nothing at 6 or more players.
  */
 public enum Role {
 
@@ -36,10 +40,6 @@ public enum Role {
 
     TITANIA(GOOD, "Titania",
             "You appear as Evil to all players with Evil roles (except Colgrevance)."),
-
-    NIMUE(GOOD, "Nimue", """
-            You know which Good and Evil roles are in the game, but not who has any given role.
-            You are a valid Assassination target."""),
 
     MORDRED(EVIL, "Mordred", """
             You are hidden from all Good Information roles.

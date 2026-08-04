@@ -17,8 +17,13 @@ import static com.thavalon.domain.Role.*;
  *   <li><b>9 players</b> get 4 Evil, where standard Avalon gives 3.</li>
  * </ul>
  *
- * <p>Both are preserved on purpose so behaviour matches the original exactly. Because they live
- * here as data rather than as control flow, changing either is a one-line edit that
+ * <p>The one intentional departure from the original table is that Nimue is not in the 5-player
+ * Good pool — this group does not play her, so she is gone from {@link Role} entirely. That
+ * leaves 5 players drawing 3 Good from the always-eligible core five, exactly as 6 players
+ * draw 4 from it.
+ *
+ * <p>Both unbalanced counts are preserved on purpose so behaviour matches the original. Because
+ * they live here as data rather than as control flow, changing either is a one-line edit that
  * {@code RoleTableTest} will still validate.
  */
 public final class RoleTable {
@@ -43,7 +48,7 @@ public final class RoleTable {
 
     private static final Map<Integer, Config> TABLE = Map.of(
             //         players  evil  good pool                          evil pool
-            5,  new Config(5,  2, concat(CORE_GOOD, NIMUE),          CORE_EVIL),
+            5,  new Config(5,  2, CORE_GOOD,                         CORE_EVIL),
             6,  new Config(6,  2, CORE_GOOD,                         CORE_EVIL),
             7,  new Config(7,  3, GOOD_7_PLUS,                       CORE_EVIL),
             8,  new Config(8,  3, GOOD_7_PLUS,                       concat(CORE_EVIL, AGRAVAINE)),
