@@ -10,8 +10,8 @@ import java.util.List;
  * (thavalon.py:186-192). Two differences from the original:
  *
  * <ul>
- *   <li>Dispatches on the dealt role, rather than building all thirteen roles' lists per player
- *       and discarding twelve.</li>
+ *   <li>Dispatches on the dealt role, rather than building every role's list per player and
+ *       discarding all but one.</li>
  *   <li>Compares roles by enum identity. The original used Python's {@code is} operator on
  *       string literals, which works only because CPython interns them.</li>
  * </ul>
@@ -45,12 +45,6 @@ public final class RoleInfo {
             // Arthur learns which Good roles are present, not who holds them.
             case ARTHUR -> seats.stream()
                     .filter(s -> s.role().isGood() && s.role() != Role.ARTHUR)
-                    .map(s -> s.role().displayName())
-                    .toList();
-
-            // Nimue learns every role in the game, Good and Evil, but not who holds them.
-            case NIMUE -> seats.stream()
-                    .filter(s -> s.role() != Role.NIMUE)
                     .map(s -> s.role().displayName())
                     .toList();
 
