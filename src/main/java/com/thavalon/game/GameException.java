@@ -57,6 +57,12 @@ public class GameException extends RuntimeException {
                 "THavalon needs at least " + min + " players. You have " + current + ".");
     }
 
+    public static GameException auditUnavailable(String gameId) {
+        return new GameException(HttpStatus.GONE, "AUDIT_UNAVAILABLE",
+                "The audit trail for " + gameId + " is no longer available. It may have passed its "
+                        + "retention window, or failed to write.");
+    }
+
     public static GameException auditSealed(java.time.Instant opensAt) {
         return new GameException(HttpStatus.LOCKED, "AUDIT_SEALED",
                 "This game's audit is sealed until " + opensAt

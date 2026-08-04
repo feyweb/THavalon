@@ -31,5 +31,30 @@ public record ThavalonProperties(String dataDir, Duration gameTtl, Duration audi
         if (auditRetention == null) {
             auditRetention = Duration.ofDays(30);
         }
+
+        // Two timers act on the same file: a trail is sealed until auditUnlockAfter, and deleted
+        // at auditRetention. Inverted, every trail is destroyed before it ever becomes readable
+        // and games silently never reach Past games — with no error anywhere, because the reader
+        // cannot tell a swept trail from a game that was never dealt. Fail at startup instead,
+        // where the cause is obvious.
+        if (!auditRetention.minus(auditUnlockAfter).isPositive()) {
+            throw new IllegalArgumentException(
+                    "thavalon.audit-retention (%s) must be longer than thavalon.audit-unlock-after (%s), "
+                            .formatted(auditRetention, auditUnlockAfter)
+                            + "or audit trails are deleted before they ever unlock");
+        }
+
+        // A third timer reaches the same file. Sweeping a game unseals its audit outright —
+        // GameService.isUnsealed treats a missing game as one that must be long over — so a TTL
+        // shorter than the seal opens every trail early, while people may still be playing.
+        // This is the more dangerous inversion of the two: the one above loses data, this one
+        // reveals roles mid-game, and it does so through a setting that looks unrelated to the
+        // seal. Nothing at runtime would flag it.
+        if (!gameTtl.minus(auditUnlockAfter).isPositive()) {
+            throw new IllegalArgumentException(
+                    "thavalon.game-ttl (%s) must be longer than thavalon.audit-unlock-after (%s), "
+                            .formatted(gameTtl, auditUnlockAfter)
+                            + "or sweeping a game unseals its audit before the game can be over");
+        }
     }
 }
