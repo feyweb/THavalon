@@ -100,9 +100,12 @@ class SimulationTest {
             n += expect(violations, index, "lovers are unavoidable at 6 and 10 players", lovers == 2);
         }
 
+        // Nimue is not played here. Checked by name, not by enum constant, so this keeps failing
+        // if she is ever added back to Role.
+        n += expect(violations, index, "Nimue is never dealt",
+                roles.values().stream().noneMatch(r -> r.displayName().equals("Nimue")));
+
         // Count-gated roles.
-        n += expect(violations, index, "Nimue only at 5 players",
-                !roles.containsValue(Role.NIMUE) || game.players() == 5);
         n += expect(violations, index, "Arthur only at 7+",
                 !roles.containsValue(Role.ARTHUR) || game.players() >= 7);
         n += expect(violations, index, "Titania only at 7+",
@@ -166,9 +169,6 @@ class SimulationTest {
             }
             case ARTHUR -> roles.values().stream()
                     .filter(r -> r.isGood() && r != Role.ARTHUR)
-                    .forEach(r -> expected.add(r.displayName()));
-            case NIMUE -> roles.values().stream()
-                    .filter(r -> r != Role.NIMUE)
                     .forEach(r -> expected.add(r.displayName()));
             case LANCELOT, TITANIA -> {
                 // Ability roles receive nothing.
