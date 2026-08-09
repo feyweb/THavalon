@@ -11,6 +11,19 @@
 <main>
   <div id="error" class="error"></div>
 
+  <!-- Public, so it sits outside the cover: knowing who proposes first tells you nothing about
+       anyone's role, and it is the thing people need while the cards stay face down. -->
+  <p class="proposer hidden" id="proposer"></p>
+
+  <!-- The card is fetched once and built up front, but stays behind this cover until asked for.
+       Rendering it on arrival meant a role could be on screen while the phone was still being
+       handed over. -->
+  <div class="card cover-card" id="cover">
+    <p class="cover-name" id="cover-name"></p>
+    <p class="cover-hint">Make sure nobody can see your screen.</p>
+    <button id="reveal-btn">Reveal my role</button>
+  </div>
+
   <!-- Rendered once and then left alone: nothing repaints while you are taking a screenshot. -->
   <div class="card role-card hidden" id="card">
     <span class="team-badge" id="team"></span>
@@ -27,6 +40,8 @@
     <p class="assassin-note hidden" id="assassin">You are the Assassin</p>
   </div>
 
+  <button id="hide-btn" class="secondary hidden">Hide my role</button>
+
   <div class="card hidden" id="roster-card">
     <h2><span id="player-count">0</span> players in this game</h2>
     <ol class="players" id="players"></ol>
@@ -41,6 +56,23 @@
 <script>
   const gameId = gameIdFromUrl();
 
+  function show(id) { document.getElementById(id).classList.remove('hidden'); }
+  function hide(id) { document.getElementById(id).classList.add('hidden'); }
+
+  /** Face up. The card is already built, so this only changes what is visible. */
+  function reveal() {
+    hide('cover');
+    show('card');
+    show('hide-btn');
+  }
+
+  /** Face down again — for putting the phone on the table mid-game without closing the tab. */
+  function conceal() {
+    hide('card');
+    hide('hide-btn');
+    show('cover');
+  }
+
   (async () => {
     if (!store.token(gameId)) {
       location.replace('index.html');
@@ -54,6 +86,14 @@
         return;
       }
 
+      document.getElementById('cover-name').textContent = me.name;
+
+      if (me.firstProposer) {
+        document.getElementById('proposer').innerHTML =
+          `<strong>${escapeHtml(me.firstProposer)}</strong> proposes the first mission`;
+        show('proposer');
+      }
+
       const card = document.getElementById('card');
       card.classList.add(me.team === 'EVIL' ? 'evil' : 'good');
       document.getElementById('team').textContent = me.team === 'EVIL' ? 'Evil' : 'Good';
@@ -62,7 +102,7 @@
       document.getElementById('description').textContent = me.description;
 
       if (me.info && me.info.length) {
-        document.getElementById('info-block').classList.remove('hidden');
+        show('info-block');
         const list = document.getElementById('info');
         for (const line of me.info) {
           const li = document.createElement('li');
@@ -72,10 +112,8 @@
       }
 
       if (me.assassin) {
-        document.getElementById('assassin').classList.remove('hidden');
+        show('assassin');
       }
-
-      card.classList.remove('hidden');
 
       if (me.players && me.players.length) {
         document.getElementById('player-count').textContent = me.players.length;
@@ -92,8 +130,11 @@
           }
           roster.append(li);
         }
-        document.getElementById('roster-card').classList.remove('hidden');
+        show('roster-card');
       }
+
+      document.getElementById('reveal-btn').addEventListener('click', reveal);
+      document.getElementById('hide-btn').addEventListener('click', conceal);
     } catch (e) {
       // A token this game does not recognise — most likely left over from an earlier game that
       // reused the same ID. Send them back to rejoin rather than showing a dead end.

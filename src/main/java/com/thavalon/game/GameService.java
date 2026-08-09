@@ -163,15 +163,19 @@ public class GameService {
                 player.setAssassin(assignment.assassin());
                 player.setInfo(assignment.info());
             }
+            game.setFirstProposer(deal.firstProposer());
             game.setState(GameState.DEALT);
             store.save(game);
 
             // The dealt roles go into the audit under "roles", sealed until the game is over.
+            // The first proposer is public, but lives here too so a finished game reads whole.
             Map<String, Object> roles = new LinkedHashMap<>();
             game.getPlayers().forEach(p -> roles.put(p.getName(), p.getRole().displayName()));
             record(game, AuditEventType.GAME_STARTED,
                     game.host().map(Player::getName).orElse(null),
-                    Map.of("playerCount", count, "roles", roles));
+                    Map.of("playerCount", count,
+                            "firstProposer", deal.firstProposer(),
+                            "roles", roles));
             return game;
         }
     }

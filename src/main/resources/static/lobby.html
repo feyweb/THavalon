@@ -9,24 +9,35 @@
 </head>
 <body>
 <main>
-  <h1>Lobby</h1>
+  <h1 id="heading">Lobby</h1>
 
   <div id="error" class="error"></div>
 
-  <div class="card">
+  <div class="card" id="code-card">
     <p class="game-code" id="code">····</p>
     <p class="code-hint">Everyone types this game ID to join</p>
   </div>
 
-  <div class="card">
+  <div class="card" id="players-card">
     <h2><span id="count">0</span> of 10 players</h2>
     <ol class="players" id="players"></ol>
     <p class="status" id="status">Waiting for players…</p>
   </div>
 
   <button id="start-btn" class="hidden" disabled>Start game</button>
-  <div class="spacer"></div>
+  <div class="spacer" id="gap"></div>
   <button id="leave-btn" class="danger">Leave</button>
+
+  <!-- Shown once roles are dealt, in place of the lobby. -->
+  <div id="dealt" class="hidden">
+    <div class="card dealt-card">
+      <h2>Roles are dealt</h2>
+      <p class="proposer" id="proposer"></p>
+      <p class="dealt-hint">Your role is private. Open it when nobody is looking over your
+        shoulder.</p>
+    </div>
+    <a class="button-link" id="view-role-btn" href="#">View my role</a>
+  </div>
 </main>
 
 <script src="app.js"></script>
@@ -94,6 +105,27 @@
     start.disabled = !lobby.canStart;
   }
 
+  /** Replaces the lobby with the dealt panel. Polling stops here; nothing else changes. */
+  function showDealt(lobby) {
+    showError('');
+    document.getElementById('heading').textContent = gameId;
+    for (const id of ['code-card', 'players-card', 'start-btn', 'leave-btn', 'gap']) {
+      document.getElementById(id)?.classList.add('hidden');
+    }
+    if (lobby.firstProposer) {
+      document.getElementById('proposer').innerHTML =
+        `<strong>${escapeHtml(lobby.firstProposer)}</strong> proposes the first mission`;
+    }
+    document.getElementById('view-role-btn').href = `role.html?g=${encodeURIComponent(gameId)}`;
+    document.getElementById('dealt').classList.remove('hidden');
+  }
+
+  function escapeHtml(value) {
+    const div = document.createElement('div');
+    div.textContent = value ?? '';
+    return div.innerHTML;
+  }
+
   async function poll() {
     try {
       const lobby = await api(`/api/games/${gameId}`, { gameId });
@@ -106,7 +138,10 @@
       }
 
       if (lobby.state === 'DEALT') {
-        goTo('role.html', gameId);
+        // Deliberately does not navigate. Jumping straight to the card put someone's role on
+        // screen before they were ready to look at it — often while the phone was still being
+        // passed around. Stop polling and wait for them to ask for it.
+        showDealt(lobby);
         return;
       }
       render(lobby);

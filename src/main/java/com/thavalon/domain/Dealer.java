@@ -10,7 +10,7 @@ import java.util.Set;
 
 /**
  * Deals one THavalon game: picks the roles in play, assigns them to players, chooses the
- * Assassin, and generates each player's information.
+ * Assassin and the first proposer, and generates each player's information.
  *
  * <p>Instances are cheap; a {@link SecureRandom} is used by default so no two games share a
  * seed. Tests may inject a seeded {@link Random} for reproducibility.
@@ -45,7 +45,10 @@ public final class Dealer {
                         informationFor(seat, seats, seat.equals(assassin))))
                 .toList();
 
-        return new Deal(assignments);
+        // Public information, so it is drawn here alongside the roles rather than left to the
+        // table — everyone is shown the same name.
+        String firstProposer = names.get(random.nextInt(names.size()));
+        return new Deal(assignments, firstProposer);
     }
 
     /**

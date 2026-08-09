@@ -6,10 +6,11 @@ import java.util.Optional;
 /**
  * The result of dealing one game.
  *
- * <p>The reference implementation also nominated a first proposer (thavalon.py:206-209). That is
- * deliberately absent here — the table picks who proposes first by its own means.
+ * @param firstProposer who proposes the first mission, drawn at random as the reference
+ *                      implementation does (thavalon.py:206-209). Unlike a role this is public:
+ *                      every player is shown the same name.
  */
-public record Deal(List<Assignment> assignments) {
+public record Deal(List<Assignment> assignments, String firstProposer) {
 
     public Deal {
         assignments = List.copyOf(assignments);

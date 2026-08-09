@@ -193,6 +193,36 @@ ol.players li::before {
 
 .status { text-align: center; color: var(--muted); font-size: 0.85rem; margin: 0.75rem 0 0; }
 
+/* ---- dealt panel, shown in the lobby once roles are out ---- */
+
+.dealt-card { text-align: center; }
+.dealt-hint { color: var(--muted); font-size: 0.85rem; margin: 0.6rem 0 0; }
+
+.proposer {
+  text-align: center;
+  font-size: 0.95rem;
+  color: var(--muted);
+  margin: 0 0 1rem;
+}
+.proposer strong { color: var(--accent); }
+
+/* ---- the cover that keeps a role face down until asked for ---- */
+
+.cover-card { text-align: center; padding: 1.6rem 1.2rem; }
+
+.cover-name {
+  font-size: 1.3rem;
+  font-weight: 800;
+  margin: 0 0 0.2rem;
+  color: var(--text);
+}
+
+.cover-hint {
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin: 0 0 1.1rem;
+}
+
 /* ---- role card ---- */
 
 .role-card { padding: 1.4rem 1.2rem; text-align: center; }

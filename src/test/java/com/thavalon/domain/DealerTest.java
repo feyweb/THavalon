@@ -122,6 +122,51 @@ class DealerTest {
         assertThat(sawNone).as("games with neither lover").isTrue();
     }
 
+    @Test
+    @DisplayName("every seat is equally likely to propose the first mission")
+    void firstProposerIsAPlayerAndVariesUniformly() {
+        int players = 7;
+        Dealer d = new Dealer(new Random(4242L));
+        List<String> names = players(players);
+        var counts = new java.util.TreeMap<String, Integer>();
+
+        int games = 20_000;
+        for (int i = 0; i < games; i++) {
+            String proposer = d.deal(names).firstProposer();
+            assertThat(proposer).as("first proposer is at the table").isIn(names);
+            counts.merge(proposer, 1, Integer::sum);
+        }
+
+        // Every seat, not just the host or the first to join.
+        assertThat(counts).hasSize(players);
+        assertThat(counts).allSatisfy((name, seen) ->
+                assertThat(seen / (double) games).as("share of games %s proposes first", name)
+                        .isCloseTo(1.0 / players, org.assertj.core.data.Offset.offset(0.02)));
+    }
+
+    @Test
+    @DisplayName("the first proposer is drawn independently of who is Evil")
+    void firstProposerIsIndependentOfAlignment() {
+        Dealer d = new Dealer(new Random(99L));
+        int games = 20_000;
+        int proposerEvil = 0;
+
+        for (int i = 0; i < games; i++) {
+            Deal deal = d.deal(players(10));
+            Assignment proposer = deal.assignments().stream()
+                    .filter(a -> a.playerName().equals(deal.firstProposer()))
+                    .findFirst().orElseThrow();
+            if (proposer.team() == Team.EVIL) {
+                proposerEvil++;
+            }
+        }
+
+        // 4 Evil of 10, so an unbiased draw makes the proposer Evil 40% of the time. Anything
+        // else would leak alignment before a single mission is proposed.
+        assertThat(proposerEvil / (double) games)
+                .isCloseTo(0.4, org.assertj.core.data.Offset.offset(0.02));
+    }
+
     @ParameterizedTest(name = "{0} players")
     @ValueSource(ints = {5, 6, 7, 8, 9, 10})
     @DisplayName("exactly one Assassin, always Evil")
