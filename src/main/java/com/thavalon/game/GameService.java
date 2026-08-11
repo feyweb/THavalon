@@ -163,23 +163,31 @@ public class GameService {
                 player.setAssassin(assignment.assassin());
                 player.setInfo(assignment.info());
             }
+            game.setFirstProposer(deal.firstProposer());
             game.setState(GameState.DEALT);
             store.save(game);
 
             // The dealt roles go into the audit under "roles", sealed until the game is over.
+            // The first proposer is public, but lives here too so a finished game reads whole.
             Map<String, Object> roles = new LinkedHashMap<>();
             game.getPlayers().forEach(p -> roles.put(p.getName(), p.getRole().displayName()));
             record(game, AuditEventType.GAME_STARTED,
                     game.host().map(Player::getName).orElse(null),
-                    Map.of("playerCount", count, "roles", roles));
+                    Map.of("playerCount", count,
+                            "firstProposer", deal.firstProposer(),
+                            "roles", roles));
             return game;
         }
     }
 
     /**
-     * The caller's own player record, resolved from their private token. The first time a player
-     * opens their card after the deal is audited, so the host can tell at a glance whether
-     * everyone has actually looked.
+     * The caller's own player record, resolved from their private token.
+     *
+     * <p>The first fetch after the deal is audited as {@code ROLE_VIEWED}. Note what that does and
+     * does not mean: the role page requests this on load, while the card is still face down, so
+     * the event records that a player <em>opened</em> their card page — not that they turned it
+     * over. Revealing happens entirely in the browser and the server never hears about it.
+     * Treat it as "this player's device fetched their role", which is what it can honestly claim.
      */
     public Player me(String gameId, String token) {
         Game game = require(gameId);

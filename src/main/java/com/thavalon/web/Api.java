@@ -42,7 +42,9 @@ public final class Api {
             boolean canStart,
             boolean youAreHost,
             /** The caller's own name, so the lobby can mark which player they are. */
-            String yourName) {
+            String yourName,
+            /** Who proposes the first mission. Public, so everyone sees the same name. */
+            String firstProposer) {
 
         public static LobbyResponse of(Game game, String token) {
             int count = game.getPlayers().size();
@@ -55,7 +57,8 @@ public final class Api {
                     RoleTable.MAX_PLAYERS,
                     game.getState() == GameState.LOBBY && count >= RoleTable.MIN_PLAYERS,
                     game.isHost(token),
-                    game.playerByToken(token).map(Player::getName).orElse(null));
+                    game.playerByToken(token).map(Player::getName).orElse(null),
+                    game.getFirstProposer());
         }
     }
 
@@ -71,7 +74,9 @@ public final class Api {
             boolean assassin,
             boolean host,
             /** Everyone in the game, in join order — names only, the same public roster the lobby shows. */
-            List<String> players) {
+            List<String> players,
+            /** Who proposes the first mission. Public, so it can be shown without revealing a role. */
+            String firstProposer) {
 
         public static MeResponse of(Game game, Player me) {
             return new MeResponse(
@@ -84,7 +89,8 @@ public final class Api {
                     me.getInfo(),
                     me.isAssassin(),
                     game.isHost(me.getToken()),
-                    game.getPlayers().stream().map(Player::getName).toList());
+                    game.getPlayers().stream().map(Player::getName).toList(),
+                    game.getFirstProposer());
         }
     }
 

@@ -325,6 +325,36 @@ class GameApiTest {
     }
 
     @Test
+    @DisplayName("everyone is shown the same first proposer, and only after the deal")
+    void everyoneSeesTheSameFirstProposer() throws Exception {
+        List<Session> sessions = lobbyOf(6);
+        Session host = sessions.getFirst();
+        List<String> names = sessions.stream().map(Session::name).toList();
+
+        // Nobody is nominated before the deal.
+        mvc.perform(get("/api/games/{id}", host.gameId()))
+                .andExpect(jsonPath("$.firstProposer").doesNotExist());
+
+        String proposer = read(mvc.perform(post("/api/games/{id}/start", host.gameId())
+                        .header(GameController.TOKEN_HEADER, host.token()))
+                .andExpect(status().isOk())
+                .andReturn())
+                .get("firstProposer").asText();
+        assertThat(proposer).isIn(names);
+
+        // The lobby serves it publicly — it is not a secret, so no token is needed.
+        mvc.perform(get("/api/games/{id}", host.gameId()))
+                .andExpect(jsonPath("$.firstProposer").value(proposer));
+
+        // And every player's own card agrees, so nobody can be told a different name.
+        for (Session session : sessions) {
+            assertThat(me(session).get("firstProposer").asText())
+                    .as("first proposer seen by %s", session.name())
+                    .isEqualTo(proposer);
+        }
+    }
+
+    @Test
     @DisplayName("starting deals a distinct role to every player")
     void startDealsDistinctRoles() throws Exception {
         List<Session> sessions = lobbyOf(7);

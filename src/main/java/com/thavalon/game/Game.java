@@ -24,6 +24,8 @@ public class Game {
     private String hostToken;
     private GameState state = GameState.LOBBY;
     private List<Player> players = new ArrayList<>();
+    /** Who proposes the first mission. Public — every player is shown the same name. */
+    private String firstProposer;
     private Instant createdAt = Instant.now();
     private Instant updatedAt = Instant.now();
 
@@ -96,6 +98,14 @@ public class Game {
 
     public void setPlayers(List<Player> players) {
         this.players = players == null ? new ArrayList<>() : new ArrayList<>(players);
+    }
+
+    public String getFirstProposer() {
+        return firstProposer;
+    }
+
+    public void setFirstProposer(String firstProposer) {
+        this.firstProposer = firstProposer;
     }
 
     public Instant getCreatedAt() {
