@@ -224,6 +224,17 @@ ol.players li::before {
   user-select: all;
 }
 
+/* Sits slightly above the text baseline; emoji metrics otherwise make it look like it is
+   sinking. margin-left:auto in the roster pushes it to the right, next to the you tag. */
+.crown {
+  font-size: 1em;
+  line-height: 1;
+  margin-right: 0.35rem;
+}
+
+ol.players .crown { margin-left: auto; margin-right: 0; }
+ol.players .crown + .you-tag { margin-left: 0.4rem; }
+
 .proposer {
   text-align: center;
   font-size: 0.95rem;
