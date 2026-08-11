@@ -16,6 +16,8 @@
   <div class="card" id="code-card">
     <p class="game-code" id="code">····</p>
     <p class="code-hint">Everyone types this game ID to join</p>
+    <button id="share-btn" class="secondary">Share invite link</button>
+    <p class="share-link hidden" id="share-link"></p>
   </div>
 
   <div class="card" id="players-card">
@@ -28,16 +30,6 @@
   <div class="spacer" id="gap"></div>
   <button id="leave-btn" class="danger">Leave</button>
 
-  <!-- Shown once roles are dealt, in place of the lobby. -->
-  <div id="dealt" class="hidden">
-    <div class="card dealt-card">
-      <h2>Roles are dealt</h2>
-      <p class="proposer" id="proposer"></p>
-      <p class="dealt-hint">Your role is private. Open it when nobody is looking over your
-        shoulder.</p>
-    </div>
-    <a class="button-link" id="view-role-btn" href="#">View my role</a>
-  </div>
 </main>
 
 <script src="app.js"></script>
@@ -105,27 +97,6 @@
     start.disabled = !lobby.canStart;
   }
 
-  /** Replaces the lobby with the dealt panel. Polling stops here; nothing else changes. */
-  function showDealt(lobby) {
-    showError('');
-    document.getElementById('heading').textContent = gameId;
-    for (const id of ['code-card', 'players-card', 'start-btn', 'leave-btn', 'gap']) {
-      document.getElementById(id)?.classList.add('hidden');
-    }
-    if (lobby.firstProposer) {
-      document.getElementById('proposer').innerHTML =
-        `<strong>${escapeHtml(lobby.firstProposer)}</strong> proposes the first mission`;
-    }
-    document.getElementById('view-role-btn').href = `role.html?g=${encodeURIComponent(gameId)}`;
-    document.getElementById('dealt').classList.remove('hidden');
-  }
-
-  function escapeHtml(value) {
-    const div = document.createElement('div');
-    div.textContent = value ?? '';
-    return div.innerHTML;
-  }
-
   async function poll() {
     try {
       const lobby = await api(`/api/games/${gameId}`, { gameId });
@@ -138,10 +109,10 @@
       }
 
       if (lobby.state === 'DEALT') {
-        // Deliberately does not navigate. Jumping straight to the card put someone's role on
-        // screen before they were ready to look at it — often while the phone was still being
-        // passed around. Stop polling and wait for them to ask for it.
-        showDealt(lobby);
+        // Navigating is safe because the role page opens face down: the card is only shown once
+        // Reveal is pressed. It is the cover that stops a role appearing before its owner is
+        // ready, so an extra tap here would just be ceremony.
+        goTo('role.html', gameId);
         return;
       }
       render(lobby);
@@ -155,6 +126,51 @@
     }
     setTimeout(poll, POLL_MS);
   }
+
+  /**
+   * A link that opens the join form with the game ID already filled in, so nobody has to read a
+   * code across a room. Uses the native share sheet where there is one — on a phone that puts it
+   * straight into whichever group chat people are already using — and falls back to the clipboard.
+   */
+  onClick('share-btn', async () => {
+    const url = new URL('index.html', location.href);
+    url.searchParams.set('g', gameId);
+    const link = url.toString();
+    const button = document.getElementById('share-btn');
+
+    if (navigator.share) {
+      try {
+        // URL only. Passing `text` as well makes some share targets concatenate the two into a
+        // single string, and pasting that lands the message inside the query — the game ID comes
+        // out as "TEST345 Join my THavalon game".
+        await navigator.share({ title: `Join THavalon game ${gameId}`, url: link });
+        return;
+      } catch (e) {
+        if (e.name === 'AbortError') return;      // they dismissed the sheet; not an error
+        // Anything else: fall through to the clipboard.
+      }
+    }
+    // navigator.clipboard exists only in a secure context, so over plain HTTP to a LAN address —
+    // how this is most often played — it is undefined and writeText would throw. Show the link
+    // instead of failing: it can still be selected and copied by hand.
+    try {
+      if (!navigator.clipboard) throw new Error('no clipboard in this context');
+      await navigator.clipboard.writeText(link);
+      button.textContent = 'Link copied';
+      setTimeout(() => { button.textContent = 'Share invite link'; }, 2000);
+    } catch (e) {
+      const shown = document.getElementById('share-link');
+      shown.textContent = link;
+      shown.classList.remove('hidden');
+      button.textContent = 'Copy this link';
+      // Preselect it so one keystroke copies.
+      const range = document.createRange();
+      range.selectNodeContents(shown);
+      const selection = window.getSelection();
+      selection.removeAllRanges();
+      selection.addRange(range);
+    }
+  });
 
   onClick('start-btn', async () => {
     await api(`/api/games/${gameId}/start`, { method: 'POST', gameId });

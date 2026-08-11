@@ -106,6 +106,61 @@ class GameStorePersistenceTest {
                 .as("the restored game is joinable").doesNotThrowAnyException();
     }
 
+    /**
+     * The first proposer is drawn once, at the deal. If it were not persisted a restart would
+     * silently renominate somebody — or blank the name — after the table had already agreed who
+     * goes first.
+     */
+    @Test
+    @DisplayName("the first proposer survives a restart unchanged")
+    void firstProposerSurvivesRestart(@TempDir Path dir) {
+        GameStore first = storeOver(dir);
+        GameService service = serviceOver(dir, first);
+
+        GameService.Joined host = service.createGame("Host", "PROPOSER");
+        for (int i = 1; i < 6; i++) {
+            service.join("PROPOSER", "P" + i);
+        }
+        service.start("PROPOSER", host.playerToken());
+
+        String before = first.find("PROPOSER").orElseThrow().getFirstProposer();
+        assertThat(before).isNotBlank();
+
+        Game reloaded = storeOver(dir).find("PROPOSER").orElseThrow();
+        assertThat(reloaded.getFirstProposer()).isEqualTo(before);
+        assertThat(reloaded.getPlayers()).extracting(Player::getName).contains(before);
+    }
+
+    /**
+     * A game dealt before the first proposer existed reloads without one. There is no value to
+     * recover — it was never drawn — so the only requirement is that nothing breaks and the
+     * absence is reported honestly as null.
+     */
+    @Test
+    @DisplayName("a snapshot predating the first proposer reloads without one, and still works")
+    void snapshotWithoutFirstProposerStillLoads(@TempDir Path dir) throws Exception {
+        Files.writeString(dir.resolve("PREPROP.json"), """
+                {
+                  "id": "PREPROP",
+                  "hostToken": "tok-host",
+                  "state": "DEALT",
+                  "auditKey": "PREPROP-20260701-100000-AAAA",
+                  "players": [
+                    {"name": "Host", "token": "tok-host", "role": "MERLIN", "info": []},
+                    {"name": "Other", "token": "tok-other", "role": "MORDRED", "info": []}
+                  ],
+                  "createdAt": "2026-07-01T10:00:00Z",
+                  "updatedAt": "2026-07-01T10:00:00Z"
+                }
+                """);
+
+        Game game = storeOver(dir).find("PREPROP").orElseThrow();
+        assertThat(game.getFirstProposer()).as("nothing to recover, so null rather than invented")
+                .isNull();
+        assertThat(game.getState()).isEqualTo(GameState.DEALT);
+        assertThat(game.playerByToken("tok-other")).isPresent();
+    }
+
     @Test
     @DisplayName("an unreadable snapshot is skipped rather than blocking startup")
     void corruptSnapshotDoesNotBlockStartup(@TempDir Path dir) throws Exception {

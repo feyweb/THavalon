@@ -89,8 +89,12 @@
       document.getElementById('cover-name').textContent = me.name;
 
       if (me.firstProposer) {
-        document.getElementById('proposer').innerHTML =
-          `<strong>${escapeHtml(me.firstProposer)}</strong> proposes the first mission`;
+        // Built from nodes rather than a template string: no user-supplied value ever goes near
+        // markup, so there is nothing for escaping to get wrong.
+        const who = document.createElement('strong');
+        who.textContent = me.firstProposer;
+        const line = document.getElementById('proposer');
+        line.append(who, document.createTextNode(' proposes the first mission'));
         show('proposer');
       }
 
@@ -147,12 +151,6 @@
       showError(e.message);
     }
   })();
-
-  function escapeHtml(value) {
-    const div = document.createElement('div');
-    div.textContent = value ?? '';
-    return div.innerHTML;
-  }
 </script>
 </body>
 </html>

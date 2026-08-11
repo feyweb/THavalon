@@ -181,9 +181,13 @@ public class GameService {
     }
 
     /**
-     * The caller's own player record, resolved from their private token. The first time a player
-     * opens their card after the deal is audited, so the host can tell at a glance whether
-     * everyone has actually looked.
+     * The caller's own player record, resolved from their private token.
+     *
+     * <p>The first fetch after the deal is audited as {@code ROLE_VIEWED}. Note what that does and
+     * does not mean: the role page requests this on load, while the card is still face down, so
+     * the event records that a player <em>opened</em> their card page — not that they turned it
+     * over. Revealing happens entirely in the browser and the server never hears about it.
+     * Treat it as "this player's device fetched their role", which is what it can honestly claim.
      */
     public Player me(String gameId, String token) {
         Game game = require(gameId);

@@ -193,10 +193,18 @@ ol.players li::before {
 
 .status { text-align: center; color: var(--muted); font-size: 0.85rem; margin: 0.75rem 0 0; }
 
-/* ---- dealt panel, shown in the lobby once roles are out ---- */
-
-.dealt-card { text-align: center; }
-.dealt-hint { color: var(--muted); font-size: 0.85rem; margin: 0.6rem 0 0; }
+/* Shown when the clipboard is unavailable, so the link can be copied by hand. */
+.share-link {
+  margin: 0.7rem 0 0;
+  padding: 0.5rem 0.6rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.78rem;
+  color: var(--text);
+  overflow-wrap: anywhere;
+  user-select: all;
+}
 
 .proposer {
   text-align: center;

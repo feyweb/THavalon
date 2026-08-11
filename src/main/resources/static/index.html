@@ -19,25 +19,25 @@
     <button id="rejoin-btn" class="secondary">Rejoin <span id="rejoin-code"></span></button>
   </div>
 
-  <div class="card">
+  <div class="card" id="new-game">
     <h2>New game</h2>
     <label for="host-id">Game ID</label>
     <input id="host-id" maxlength="12" autocapitalize="characters"
            autocomplete="off" spellcheck="false" placeholder="e.g. FRIDAY">
     <p class="field-hint">3–12 letters, digits or hyphens. Leave blank for a random one.</p>
     <label for="host-name">Your name</label>
-    <input id="host-name" maxlength="20" autocomplete="nickname" placeholder="e.g. Morgan">
+    <input id="host-name" maxlength="20" autocomplete="nickname" placeholder="e.g. Ravan">
     <p class="field-hint">You'll be the host — you start the game once everyone has joined.</p>
     <button id="create-btn">Create game</button>
   </div>
 
-  <div class="card">
-    <h2>Join a game</h2>
+  <div class="card" id="join-card">
+    <h2 id="join-heading">Join a game</h2>
     <label for="join-code">Game ID</label>
     <input id="join-code" class="code" maxlength="12" autocapitalize="characters"
            autocomplete="off" spellcheck="false" placeholder="XXXX">
     <label for="join-name">Your name</label>
-    <input id="join-name" maxlength="20" autocomplete="nickname" placeholder="e.g. Morgan">
+    <input id="join-name" maxlength="20" autocomplete="nickname" placeholder="e.g. Ram">
     <button id="join-btn">Join game</button>
   </div>
 
@@ -56,11 +56,40 @@
     showError(notice);
   }
 
+  /**
+   * The game ID out of an invite link, cleaned up. A share sheet can append its own message to
+   * the URL, so anything after the ID is dropped rather than pasted into the form verbatim.
+   */
+  function invitedGameId() {
+    const raw = gameIdFromUrl().split(/\s+/)[0] || '';
+    const cleaned = raw.replace(/[^A-Z0-9-]/g, '').slice(0, 12);
+    return cleaned.length >= 3 ? cleaned : '';
+  }
+
+  const invited = invitedGameId();
   const last = store.lastGame();
-  if (last) {
+
+  // This device already has a token for the game being linked to.
+  const alreadyIn = invited && store.token(invited);
+
+  if (invited) {
+    // The link says which game; creating a new one is not what it is for.
+    document.getElementById('join-code').value = invited;
+    document.getElementById('new-game').classList.add('hidden');
+    // Both paths stay open: usually you want to go back in, but a shared phone or a second
+    // browser tab is a real case, so joining as someone else must remain possible.
+    document.getElementById('join-heading').textContent =
+      alreadyIn ? `Or join ${invited} as someone else` : `Join ${invited}`;
+    if (!alreadyIn) {
+      document.getElementById('join-name').focus();
+    }
+  }
+
+  const rejoinTo = alreadyIn ? invited : (invited ? null : last);
+  if (rejoinTo) {
     document.getElementById('rejoin').classList.remove('hidden');
-    document.getElementById('rejoin-code').textContent = last;
-    document.getElementById('rejoin-btn').addEventListener('click', () => goTo('lobby.html', last));
+    document.getElementById('rejoin-code').textContent = rejoinTo;
+    document.getElementById('rejoin-btn').addEventListener('click', () => goTo('lobby.html', rejoinTo));
   }
 
   onClick('create-btn', async () => {
