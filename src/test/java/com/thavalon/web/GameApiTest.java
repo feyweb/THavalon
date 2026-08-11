@@ -302,6 +302,129 @@ class GameApiTest {
         join(host.gameId(), "Host");
     }
 
+    // ---------- host removing a player ----------
+
+    private MvcResult remove(String gameId, String token, String name) throws Exception {
+        return mvc.perform(post("/api/games/{id}/remove", gameId)
+                        .header(GameController.TOKEN_HEADER, token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body(name)))
+                .andReturn();
+    }
+
+    @Test
+    @DisplayName("the host can remove a player, freeing their name to rejoin with")
+    void hostCanRemoveAPlayer() throws Exception {
+        List<Session> sessions = lobbyOf(5);
+        Session host = sessions.getFirst();
+
+        assertThat(remove(host.gameId(), host.token(), "Player3").getResponse().getStatus())
+                .isEqualTo(204);
+
+        mvc.perform(get("/api/games/{id}", host.gameId()))
+                .andExpect(jsonPath("$.players.length()").value(4))
+                .andExpect(jsonPath("$.canStart").value(false));       // back below five
+
+        // The mistyped name is available again, which is the point of the feature.
+        join(host.gameId(), "Player3");
+        mvc.perform(get("/api/games/{id}", host.gameId()))
+                .andExpect(jsonPath("$.players.length()").value(5))
+                .andExpect(jsonPath("$.canStart").value(true));
+    }
+
+    @Test
+    @DisplayName("a removed player's token stops working, which is how their page finds out")
+    void removedPlayersTokenStopsWorking() throws Exception {
+        List<Session> sessions = lobbyOf(5);
+        Session host = sessions.getFirst();
+        Session victim = sessions.get(2);
+
+        assertThat(me(victim).get("name").asText()).isEqualTo(victim.name());
+        remove(host.gameId(), host.token(), victim.name());
+
+        // Nothing is pushed to them; the lobby page keys off yourName going null and bounces them.
+        mvc.perform(get("/api/games/{id}", host.gameId())
+                        .header(GameController.TOKEN_HEADER, victim.token()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.yourName").doesNotExist());
+        mvc.perform(get("/api/games/{id}/me", host.gameId())
+                        .header(GameController.TOKEN_HEADER, victim.token()))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("only the host may remove anyone")
+    void onlyHostMayRemove() throws Exception {
+        List<Session> sessions = lobbyOf(5);
+        MvcResult result = remove(sessions.getFirst().gameId(), sessions.get(1).token(), "Player2");
+        assertThat(result.getResponse().getStatus()).isEqualTo(403);
+        assertThat(read(result).get("code").asText()).isEqualTo("NOT_HOST");
+    }
+
+    @Test
+    @DisplayName("the host cannot remove themselves — Leave exists for that")
+    void hostCannotRemoveThemselves() throws Exception {
+        List<Session> sessions = lobbyOf(5);
+        Session host = sessions.getFirst();
+        MvcResult result = remove(host.gameId(), host.token(), host.name());
+        assertThat(result.getResponse().getStatus()).isEqualTo(409);
+        assertThat(read(result).get("code").asText()).isEqualTo("CANNOT_REMOVE_HOST");
+    }
+
+    @Test
+    @DisplayName("removing somebody who is not in the game is a 404")
+    void removingUnknownPlayerIs404() throws Exception {
+        List<Session> sessions = lobbyOf(5);
+        Session host = sessions.getFirst();
+        MvcResult result = remove(host.gameId(), host.token(), "Nobody");
+        assertThat(result.getResponse().getStatus()).isEqualTo(404);
+        assertThat(read(result).get("code").asText()).isEqualTo("NO_SUCH_PLAYER");
+    }
+
+    /**
+     * After the deal, other players' information refers to this one — removing them would leave
+     * Merlin pointing at somebody no longer at the table.
+     */
+    @Test
+    @DisplayName("nobody can be removed once roles are dealt")
+    void cannotRemoveAfterTheDeal() throws Exception {
+        List<Session> sessions = lobbyOf(5);
+        Session host = sessions.getFirst();
+        mvc.perform(post("/api/games/{id}/start", host.gameId())
+                        .header(GameController.TOKEN_HEADER, host.token()))
+                .andExpect(status().isOk());
+
+        MvcResult result = remove(host.gameId(), host.token(), sessions.get(2).name());
+        assertThat(result.getResponse().getStatus()).isEqualTo(410);
+        assertThat(read(result).get("code").asText()).isEqualTo("ALREADY_STARTED");
+    }
+
+    @Test
+    @DisplayName("a removal is recorded in the audit, naming who did it")
+    void removalIsAudited() throws Exception {
+        List<Session> sessions = lobbyOf(5);
+        Session host = sessions.getFirst();
+        remove(host.gameId(), host.token(), "Player4");
+
+        assertThat(unsealedAudit.auditFor(host.gameId()).events())
+                .anySatisfy(e -> {
+                    assertThat(e.type().name()).isEqualTo("PLAYER_KICKED");
+                    assertThat(e.actor()).isEqualTo("Player4");
+                    assertThat(e.detail()).containsEntry("by", "Host");
+                });
+    }
+
+    @Test
+    @DisplayName("the name to remove is matched case-insensitively, as everywhere else")
+    void removalMatchesNameCaseInsensitively() throws Exception {
+        List<Session> sessions = lobbyOf(5);
+        Session host = sessions.getFirst();
+        assertThat(remove(host.gameId(), host.token(), "pLaYeR2").getResponse().getStatus())
+                .isEqualTo(204);
+        mvc.perform(get("/api/games/{id}", host.gameId()))
+                .andExpect(jsonPath("$.players.length()").value(4));
+    }
+
     // ---------- starting ----------
 
     @Test

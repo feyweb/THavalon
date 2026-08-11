@@ -137,6 +137,47 @@ public class GameService {
         }
     }
 
+    /**
+     * Removes someone from the lobby on the host's say-so — for the mistyped name, or the person
+     * who joined the wrong game.
+     *
+     * <p>Lobby only. After the deal a player holds a role that other players' information refers
+     * to, so removing them would leave Merlin pointing at somebody who is no longer at the table.
+     *
+     * <p>Nothing is sent to the player who is removed. Their next poll simply does not recognise
+     * their token, which the lobby page already treats as "you are not in this game any more" and
+     * sends them back to rejoin.
+     */
+    public void remove(String gameId, String hostToken, String playerName) {
+        Game game = require(gameId);
+
+        synchronized (game) {
+            if (!game.isHost(hostToken)) {
+                throw GameException.notHost();
+            }
+            if (game.getState() != GameState.LOBBY) {
+                throw GameException.alreadyStarted();
+            }
+
+            String name = validName(playerName);
+            Player target = game.getPlayers().stream()
+                    .filter(p -> p.getName().equalsIgnoreCase(name))
+                    .findFirst()
+                    .orElseThrow(() -> GameException.noSuchPlayer(name));
+
+            // Leave() exists for this, and it passes the host on rather than orphaning the game.
+            if (game.isHost(target.getToken())) {
+                throw GameException.cannotRemoveHost();
+            }
+
+            game.getPlayers().remove(target);
+            store.save(game);
+            record(game, AuditEventType.PLAYER_KICKED, target.getName(),
+                    Map.of("by", game.host().map(Player::getName).orElse("host"),
+                            "playerCount", game.getPlayers().size()));
+        }
+    }
+
     public Game start(String gameId, String token) {
         Game game = require(gameId);
 

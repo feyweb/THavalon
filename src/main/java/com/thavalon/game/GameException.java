@@ -52,6 +52,16 @@ public class GameException extends RuntimeException {
                 "This game has already started, so nobody else can join.");
     }
 
+    public static GameException noSuchPlayer(String name) {
+        return new GameException(HttpStatus.NOT_FOUND, "NO_SUCH_PLAYER",
+                "Nobody called " + name + " is in this game.");
+    }
+
+    public static GameException cannotRemoveHost() {
+        return new GameException(HttpStatus.CONFLICT, "CANNOT_REMOVE_HOST",
+                "The host cannot remove themselves. Use Leave, which passes the host on.");
+    }
+
     public static GameException notEnoughPlayers(int current, int min) {
         return new GameException(HttpStatus.CONFLICT, "NOT_ENOUGH_PLAYERS",
                 "THavalon needs at least " + min + " players. You have " + current + ".");
