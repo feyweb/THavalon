@@ -49,6 +49,19 @@ public class GameController {
         return ResponseEntity.noContent().build();
     }
 
+    /**
+     * Host removes somebody from the lobby. The name goes in the body rather than the path
+     * because player names may contain spaces and other characters that make poor path segments.
+     */
+    @PostMapping("/games/{gameId}/remove")
+    public ResponseEntity<Void> remove(
+            @PathVariable String gameId,
+            @RequestHeader(value = TOKEN_HEADER, required = false) String token,
+            @RequestBody Api.NameRequest request) {
+        games.remove(gameId, token, request.name());
+        return ResponseEntity.noContent().build();
+    }
+
     /** Lobby state. Polled every couple of seconds while players are joining. */
     @GetMapping("/games/{gameId}")
     public Api.LobbyResponse lobby(

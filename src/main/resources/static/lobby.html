@@ -76,6 +76,18 @@
         tag.textContent = 'you';
         li.append(tag);
       }
+      // The host can remove somebody who joined by mistake or mistyped their name. Never
+      // themselves — Leave does that, and it passes the host on rather than orphaning the game.
+      if (lobby.youAreHost && name !== lobby.hostName) {
+        const remove = document.createElement('button');
+        remove.className = 'remove-player';
+        remove.type = 'button';
+        remove.textContent = '×';
+        remove.title = `Remove ${name}`;
+        remove.setAttribute('aria-label', `Remove ${name}`);
+        remove.addEventListener('click', () => removePlayer(name, remove));
+        li.append(remove);
+      }
       list.append(li);
     }
 
@@ -95,6 +107,22 @@
     const start = document.getElementById('start-btn');
     start.classList.toggle('hidden', !lobby.youAreHost);
     start.disabled = !lobby.canStart;
+  }
+
+  /**
+   * Removes a player, on the host's confirmation. Guarded against a double tap because the list
+   * is rebuilt on the next poll and the button would otherwise still be live in between.
+   */
+  async function removePlayer(name, button) {
+    if (!confirm(`Remove ${name} from the game?`)) return;
+    button.disabled = true;
+    try {
+      await api(`/api/games/${gameId}/remove`, { method: 'POST', body: { name }, gameId });
+      showError('');
+    } catch (e) {
+      button.disabled = false;
+      showError(e.message);
+    }
   }
 
   async function poll() {

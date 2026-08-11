@@ -191,6 +191,24 @@ ol.players li::before {
 .you-tag { margin-left: auto; font-size: 0.72rem; color: var(--muted); }
 .host-tag + .you-tag { margin-left: 0.4rem; }
 
+/* Host-only control for removing a player. Sized for a thumb despite being small on screen. */
+.remove-player {
+  margin-left: auto;
+  flex: none;
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  font-size: 1.1rem;
+  line-height: 1;
+  color: var(--danger);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+}
+
+.remove-player:hover:not(:disabled) { border-color: var(--danger); opacity: 1; }
+.you-tag + .remove-player, .host-tag + .remove-player { margin-left: 0.5rem; }
+
 .status { text-align: center; color: var(--muted); font-size: 0.85rem; margin: 0.75rem 0 0; }
 
 /* Shown when the clipboard is unavailable, so the link can be copied by hand. */
@@ -262,7 +280,25 @@ ol.players li::before {
 .good .role-name { color: var(--good); }
 .evil .role-name { color: var(--evil); }
 
-.player-name { color: var(--muted); font-size: 0.85rem; margin: 0 0 0.9rem; }
+/* The player's own name. Bold and in the full text colour rather than muted: it is how you
+   confirm at a glance that this card is yours, which matters when phones look alike. */
+/* Set in a pill rather than just enlarged. Size alone would start competing with the role name
+   above it; a bordered chip reads as a distinct label, so it can be small and still unmissable. */
+.player-name {
+  display: inline-block;
+  color: var(--text);
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  margin: 0.35rem 0 1rem;
+  padding: 0.22rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+}
+
+.good .player-name { border-color: var(--good); }
+.evil .player-name { border-color: var(--evil); }
 
 .description {
   text-align: left;
