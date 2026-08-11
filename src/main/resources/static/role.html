@@ -91,10 +91,18 @@
       if (me.firstProposer) {
         // Built from nodes rather than a template string: no user-supplied value ever goes near
         // markup, so there is nothing for escaping to get wrong.
+        const crown = document.createElement('span');
+        crown.className = 'crown';
+        crown.textContent = '👑';
+        // Decorative: the sentence beside it already says what it means, so a screen reader
+        // announcing "crown" here would only be noise.
+        crown.setAttribute('aria-hidden', 'true');
+
         const who = document.createElement('strong');
         who.textContent = me.firstProposer;
+
         const line = document.getElementById('proposer');
-        line.append(who, document.createTextNode(' proposes the first mission'));
+        line.append(crown, who, document.createTextNode(' proposes the first mission'));
         show('proposer');
       }
 
@@ -125,6 +133,16 @@
         for (const name of me.players) {
           const li = document.createElement('li');
           li.append(document.createTextNode(name));
+          // Crown the first proposer here too, so the roster answers "who starts" without
+          // having to look back up the page.
+          if (name === me.firstProposer) {
+            const crown = document.createElement('span');
+            crown.className = 'crown';
+            crown.textContent = '👑';
+            crown.title = 'Proposes the first mission';
+            crown.setAttribute('aria-label', 'proposes the first mission');
+            li.append(crown);
+          }
           // Mark which of these is you, matching how the lobby flags it.
           if (name === me.name) {
             const tag = document.createElement('span');
