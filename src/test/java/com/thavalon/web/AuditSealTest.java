@@ -85,4 +85,29 @@ class AuditSealTest {
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("GAME_NOT_FOUND"));
     }
+
+    @Test
+    @DisplayName("a shorter ID that prefixes a live game's ID cannot read that game's trail")
+    void prefixOfLiveGameIdDoesNotUnseal() throws Exception {
+        MvcResult created = mvc.perform(post("/api/games")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json.writeValueAsString(new Api.CreateRequest("Host", "FRI-NIGHT"))))
+                .andExpect(status().isCreated()).andReturn();
+        String hostToken = json.readTree(created.getResponse().getContentAsString())
+                .get("playerToken").asText();
+        for (int i = 1; i < 5; i++) {
+            mvc.perform(post("/api/games/{id}/players", "FRI-NIGHT")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(json.writeValueAsString(new Api.NameRequest("Player" + i))))
+                    .andExpect(status().isCreated());
+        }
+        mvc.perform(post("/api/games/{id}/start", "FRI-NIGHT")
+                        .header(GameController.TOKEN_HEADER, hostToken))
+                .andExpect(status().isOk());
+
+        mvc.perform(get("/api/audit/{id}", "FRI-NIGHT")).andExpect(status().isLocked());
+        mvc.perform(get("/api/audit/{id}", "FRI"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("GAME_NOT_FOUND"));
+    }
 }

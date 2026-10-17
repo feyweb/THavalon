@@ -92,11 +92,19 @@ public class AuditLog {
                     .filter(f -> f.endsWith(".jsonl"))
                     .map(f -> f.substring(0, f.length() - ".jsonl".length()))
                     .filter(key -> key.equals(gameId) || key.startsWith(gameId + "-"))
+                    // Game IDs may contain hyphens, so "FRI" prefix-matches the trail of a
+                    // different game "FRI-NIGHT". Only a trail that records this exact ID is ours.
+                    .filter(key -> recordsGameId(key, gameId))
                     .max(java.util.Comparator.naturalOrder());
         } catch (IOException e) {
             log.warn("Could not search audit directory: {}", e.getMessage());
             return Optional.empty();
         }
+    }
+
+    private boolean recordsGameId(String auditKey, String gameId) {
+        List<AuditEvent> events = read(auditKey);
+        return !events.isEmpty() && gameId.equals(events.getFirst().gameId());
     }
 
     /** The trail for one audit key, oldest first. Empty if there is no such file. */
