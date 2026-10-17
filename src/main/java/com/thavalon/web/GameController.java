@@ -70,6 +70,18 @@ public class GameController {
         return Api.LobbyResponse.of(games.get(gameId), token);
     }
 
+    /**
+     * The player list for other apps (#19). The only endpoint open to other origins, and for GET
+     * only: it carries names and the first proposer, which anyone holding the game ID can already
+     * read from the lobby. Everything else stays same-origin, so a page on another site still
+     * cannot join, start, or read anyone's card.
+     */
+    @CrossOrigin(origins = "*", methods = RequestMethod.GET)
+    @GetMapping("/games/{gameId}/players")
+    public Api.PlayersResponse players(@PathVariable String gameId) {
+        return Api.PlayersResponse.of(games.get(gameId));
+    }
+
     @PostMapping("/games/{gameId}/start")
     public Api.LobbyResponse start(
             @PathVariable String gameId,
