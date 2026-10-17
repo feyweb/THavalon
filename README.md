@@ -241,6 +241,18 @@ nothing would report at runtime:
   the deal (so a game in progress can never be read), then stays in the list until it is deleted
   `THAVALON_AUDIT_RETENTION` later. The list shows only games that were actually dealt; abandoned
   lobbies never appear.
+- **Other apps can read a game's players** — a tracker or a scoreboard running on another site —
+  with `GET /api/games/{id}/players`:
+
+  ```json
+  {"gameId": "FRIDAY", "state": "DEALT", "players": ["Ann", "Bob", "Cal", "Dee", "Eve"], "firstProposer": "Cal"}
+  ```
+
+  Players are in join order, which is not necessarily seating order; `firstProposer` is `null`
+  until the deal. It is the only endpoint open to other origins (`Access-Control-Allow-Origin: *`,
+  GET only), and it carries nothing the lobby doesn't already show to anyone with the game ID: no
+  tokens, no roles. Everything else stays same-origin, so another site can't join a game or read
+  a card.
 
 ### Distribution table
 

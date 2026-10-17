@@ -663,6 +663,101 @@ class GameApiTest {
                 .containsExactly("Player1", "Player2");
     }
 
+    // ---------- player list for other apps (#19) ----------
+
+    /** Any page on another site; the exact origin doesn't matter, since every one is allowed. */
+    private static final String OTHER_SITE = "https://tracker.example";
+
+    @Test
+    @DisplayName("other apps can read a game's players in join order, without a token")
+    void playerListIsExportedInJoinOrder() throws Exception {
+        List<Session> sessions = lobbyOf(3);
+        String gameId = sessions.getFirst().gameId();
+
+        String body = mvc.perform(get("/api/games/{id}/players", gameId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.gameId").value(gameId))
+                .andExpect(jsonPath("$.state").value("LOBBY"))
+                .andExpect(jsonPath("$.players[0]").value("Host"))
+                .andExpect(jsonPath("$.players[1]").value("Player1"))
+                .andExpect(jsonPath("$.players[2]").value("Player2"))
+                .andExpect(jsonPath("$.players.length()").value(3))
+                .andExpect(jsonPath("$.firstProposer").doesNotExist())
+                .andReturn().getResponse().getContentAsString();
+
+        // Served to anyone with the game ID, so it must never carry a credential.
+        for (Session session : sessions) {
+            assertThat(body).as("token of %s", session.name()).doesNotContain(session.token());
+        }
+    }
+
+    @Test
+    @DisplayName("after the deal the player list names the first proposer, and still no roles")
+    void playerListAfterTheDealHasNoRoles() throws Exception {
+        List<Session> sessions = lobbyOf(5);
+        Session host = sessions.getFirst();
+        String proposer = read(mvc.perform(post("/api/games/{id}/start", host.gameId())
+                        .header(GameController.TOKEN_HEADER, host.token()))
+                .andExpect(status().isOk())
+                .andReturn())
+                .get("firstProposer").asText();
+
+        String body = mvc.perform(get("/api/games/{id}/players", host.gameId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.state").value("DEALT"))
+                .andExpect(jsonPath("$.firstProposer").value(proposer))
+                .andReturn().getResponse().getContentAsString();
+
+        for (Session session : sessions) {
+            assertThat(body).as("role of %s", session.name()).doesNotContain(me(session).get("role").asText());
+            assertThat(body).as("token of %s", session.name()).doesNotContain(session.token());
+        }
+    }
+
+    @Test
+    @DisplayName("a page on any other site may read the player list")
+    void playerListIsReadableCrossOrigin() throws Exception {
+        String gameId = create("Morgan").gameId();
+
+        mvc.perform(get("/api/games/{id}/players", gameId).header("Origin", OTHER_SITE))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Access-Control-Allow-Origin", "*"));
+
+        // Browsers send this first when a page adds its own headers; it must be answered too.
+        mvc.perform(options("/api/games/{id}/players", gameId)
+                        .header("Origin", OTHER_SITE)
+                        .header("Access-Control-Request-Method", "GET"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Access-Control-Allow-Origin", "*"));
+    }
+
+    @Test
+    @DisplayName("an unknown game is reported to other sites with its error code, not a CORS failure")
+    void unknownGameIsReadableCrossOrigin() throws Exception {
+        mvc.perform(get("/api/games/{id}/players", "NOSUCH").header("Origin", OTHER_SITE))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("GAME_NOT_FOUND"))
+                .andExpect(header().string("Access-Control-Allow-Origin", "*"));
+    }
+
+    @Test
+    @DisplayName("only the player list is opened to other sites")
+    void nothingElseIsCrossOrigin() throws Exception {
+        Session host = create("Morgan");
+
+        // The lobby holds the same names but also the caller's identity and host status.
+        mvc.perform(get("/api/games/{id}", host.gameId()).header("Origin", OTHER_SITE))
+                .andExpect(status().isOk())
+                .andExpect(header().doesNotExist("Access-Control-Allow-Origin"));
+
+        // A player's own card is the one thing that must never be readable from another site.
+        mvc.perform(get("/api/games/{id}/me", host.gameId())
+                        .header(GameController.TOKEN_HEADER, host.token())
+                        .header("Origin", OTHER_SITE))
+                .andExpect(status().isOk())
+                .andExpect(header().doesNotExist("Access-Control-Allow-Origin"));
+    }
+
     // ---------- caching ----------
 
     @Test

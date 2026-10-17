@@ -62,6 +62,26 @@ public final class Api {
         }
     }
 
+    /**
+     * A game's roster for other apps — a tracker, a scoreboard — readable from any origin by game
+     * ID alone (#19). Names in join order and the first proposer: nothing the lobby does not
+     * already show to anyone holding the ID.
+     *
+     * <p>A separate shape from {@link LobbyResponse} on purpose. The lobby's fields serve the lobby
+     * page and may change with it; this one is a contract with code outside this repository.
+     * Join order is not seating order — the server never learns where anyone sits.
+     */
+    public record PlayersResponse(String gameId, String state, List<String> players, String firstProposer) {
+
+        public static PlayersResponse of(Game game) {
+            return new PlayersResponse(
+                    game.getId(),
+                    game.getState().name(),
+                    game.getPlayers().stream().map(Player::getName).toList(),
+                    game.getFirstProposer());
+        }
+    }
+
     /** The caller's own card. Served only against their private token. */
     public record MeResponse(
             String gameId,
