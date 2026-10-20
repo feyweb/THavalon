@@ -226,6 +226,10 @@ nothing would report at runtime:
 - **Roles are dealt with `SecureRandom`**, freshly per game. Nothing is cached anywhere — every
   response carries `Cache-Control: no-store`, because a stale role card is the worst bug this
   app could have.
+- **A first proposer is drawn at the deal**, uniformly from every seat, as the reference
+  implementation does (`thavalon.py:206-209`). Unlike a role it is public: the role page names
+  them with a 👑 outside the face-down card and crowns them in the player list, so everyone can
+  see who starts without uncovering their own card.
 - **Reconnect** works off a per-player token held in the browser. A locked phone or a closed tab
   reopens to the same card rather than erroring or joining twice. The token is written to both
   `sessionStorage` and `localStorage`: the former is per-tab, so several players can sit in one
@@ -291,7 +295,6 @@ These are the places this rewrite knowingly departs from it:
 |---|---|---|
 | **Nimue** | Eligible at 5 players | Not played here — removed from `Role`, so she cannot be dealt at any count |
 | **Lone-lover repair** | Crashes when the replacement pool is empty — 6 and 10 players always, and `random.sample()` on a `set` fails at every count on Python 3.11+ | Falls through to the upgrade-to-a-pair branch, which is always viable |
-| **First proposer** | Nominated at random and written to `game/start` | Not nominated; the table decides for itself |
 | **Delivery** | One text file per player, plus `game/DoNotOpen` holding every role | Per-player web view behind a private token; no file anyone can peek at |
 | **Guinevere** | Referenced in a source comment, never implemented | Also absent |
 
